@@ -8,7 +8,7 @@
 }
 
 @media print {
-  /* Hide all elements during print on the screen, except our invoice */
+  /* Hide all elements during print on the screen, except our invoice or reports */
   body {
     background: white !important;
     color: black !important;
@@ -16,7 +16,7 @@
   body * {
     visibility: hidden !important;
   }
-  #print-receipt-area, #print-receipt-area * {
+  #print-receipt-area, #print-receipt-area *, #print-report-area, #print-report-area * {
     visibility: visible !important;
   }
   #print-receipt-area {
@@ -28,6 +28,19 @@
     max-width: 100% !important;
     margin: 0 !important;
     padding: 16px !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: white !important;
+    color: black !important;
+  }
+  #print-report-area {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 24px !important;
     box-shadow: none !important;
     border: none !important;
     background: white !important;

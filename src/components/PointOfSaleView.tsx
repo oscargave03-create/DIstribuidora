@@ -312,6 +312,13 @@ export default function PointOfSaleView({
                 line-height: 1.3;
               }
               .text-center { text-align: center; }
+              .logo-img {
+                max-height: 48px;
+                max-width: 140px;
+                object-fit: contain;
+                margin: 0 auto 6px auto;
+                display: block;
+              }
               .header {
                 border-bottom: 1px dashed #000000;
                 padding-bottom: 8px;
@@ -388,6 +395,7 @@ export default function PointOfSaleView({
           </head>
           <body>
             <div class="header text-center">
+              ${config?.logoUrl ? `<img src="${config.logoUrl}" alt="Logo" class="logo-img" />` : ''}
               <div class="company-title">${config?.companyName || "DISTRIBUIDORA DE ALIMENTOS"}</div>
               <div class="subtitle">${config?.address || "Quito, Ecuador"}</div>
               <div class="subtitle">Tel: ${config?.telephone || "(02) 299-900"} • RUC: ${config?.ruc || "1792348574001"}</div>
@@ -770,9 +778,18 @@ export default function PointOfSaleView({
             >
               {/* Receipt Header */}
               <div className="text-center border-b border-dashed border-slate-300 pb-4 space-y-1">
-                <div className="w-10 h-10 bg-teal-500/10 text-teal-600 rounded-full flex items-center justify-center mx-auto mb-1 no-print">
-                  <Check className="w-5 h-5" />
-                </div>
+                {config?.logoUrl ? (
+                  <img 
+                    src={config.logoUrl} 
+                    alt="Logo Distribuidora" 
+                    className="max-h-12 max-w-[140px] object-contain mx-auto mb-2 rounded-md bg-slate-50 p-1 border border-slate-200"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="w-10 h-10 bg-teal-500/10 text-teal-600 rounded-full flex items-center justify-center mx-auto mb-1 no-print">
+                    <Check className="w-5 h-5" />
+                  </div>
+                )}
                 <h4 className="font-sans font-bold text-slate-900 text-sm">{config?.companyName || "DISTRIBUIDORA DE ALIMENTOS"}</h4>
                 <p className="text-[10px] text-slate-500 select-none">Muelle de Carga & Sucursales</p>
                 <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">COMPROBANTE DE FACTURACIÓN</p>

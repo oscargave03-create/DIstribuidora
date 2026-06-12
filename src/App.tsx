@@ -404,6 +404,7 @@ export default function App() {
               <ReportsView 
                 products={products}
                 history={history}
+                config={appConfig || undefined}
               />
             )}
 

@@ -66,6 +66,7 @@ export interface AppConfig {
   receiptFooter: string;
   receiptAd: string;
   categories: string[];
+  logoUrl?: string; // Base64 or image URL for distributor logo
   taxes: {
     generalRate: number;
     liquorRate: number;

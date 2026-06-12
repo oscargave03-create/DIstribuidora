@@ -16,7 +16,9 @@ import {
   Type,
   FileSpreadsheet,
   CheckSquare,
-  Square
+  Square,
+  Upload,
+  Image
 } from 'lucide-react';
 import { AppConfig, UserPermission } from '../types';
 
@@ -49,6 +51,8 @@ export default function AdminPanel({
   const [address, setAddress] = useState(config.address);
   const [receiptFooter, setReceiptFooter] = useState(config.receiptFooter);
   const [receiptAd, setReceiptAd] = useState(config.receiptAd);
+  const [logoUrl, setLogoUrl] = useState(config.logoUrl || '');
+  const [isDragOver, setIsDragOver] = useState(false);
 
   // Taxes
   const [generalRate, setGeneralRate] = useState(config.taxes.generalRate);
@@ -93,6 +97,7 @@ export default function AdminPanel({
         address,
         receiptFooter,
         receiptAd,
+        logoUrl,
         taxes: {
           generalRate,
           liquorRate,
@@ -315,72 +320,179 @@ export default function AdminPanel({
                 <h3 className="text-sm font-bold text-slate-200 border-b border-slate-800 pb-2 mb-4 uppercase tracking-wider flex items-center gap-1.5">
                   <FileSpreadsheet className="w-4 h-4 text-emerald-400" /> Identidad Comercial en la Boleta de Venta
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Razón Social / Distribuidora</label>
-                    <input
-                      type="text"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      required
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-teal-500 transition"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">RUC / Cédula</label>
-                    <input
-                      type="text"
-                      value={ruc}
-                      onChange={(e) => setRuc(e.target.value)}
-                      required
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-teal-500 transition"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Teléfono / Celular</label>
-                    <input
-                      type="text"
-                      value={telephone}
-                      onChange={(e) => setTelephone(e.target.value)}
-                      required
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-teal-500 transition"
-                    />
-                  </div>
-                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Left Column (Inputs) */}
+                  <div className="lg:col-span-2 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Razón Social / Distribuidora</label>
+                        <input
+                          type="text"
+                          value={companyName}
+                          onChange={(e) => setCompanyName(e.target.value)}
+                          required
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-teal-500 transition"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">RUC / Cédula</label>
+                        <input
+                          type="text"
+                          value={ruc}
+                          onChange={(e) => setRuc(e.target.value)}
+                          required
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-teal-500 transition"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Teléfono / Celular</label>
+                        <input
+                          type="text"
+                          value={telephone}
+                          onChange={(e) => setTelephone(e.target.value)}
+                          required
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-teal-500 transition"
+                        />
+                      </div>
+                    </div>
 
-                <div className="grid grid-cols-1 gap-4 mt-4">
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Dirección de Matriz</label>
-                    <input
-                      type="text"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      required
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-teal-500 transition"
-                    />
-                  </div>
-                </div>
+                    <div className="grid grid-cols-1">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Dirección de Matriz</label>
+                        <input
+                          type="text"
+                          value={address}
+                          onChange={(e) => setAddress(e.target.value)}
+                          required
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-teal-500 transition"
+                        />
+                      </div>
+                    </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Pie de Ticket - Frase Agradecimiento</label>
-                    <input
-                      type="text"
-                      value={receiptFooter}
-                      onChange={(e) => setReceiptFooter(e.target.value)}
-                      required
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-teal-500 transition"
-                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Pie de Ticket - Frase Agradecimiento</label>
+                        <input
+                          type="text"
+                          value={receiptFooter}
+                          onChange={(e) => setReceiptFooter(e.target.value)}
+                          required
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-teal-500 transition"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Pie de Ticket - Frase de Stock o Alerta</label>
+                        <input
+                          type="text"
+                          value={receiptAd}
+                          onChange={(e) => setReceiptAd(e.target.value)}
+                          required
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-teal-500 transition"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Pie de Ticket - Frase de Stock o Alerta</label>
-                    <input
-                      type="text"
-                      value={receiptAd}
-                      onChange={(e) => setReceiptAd(e.target.value)}
-                      required
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-teal-500 transition"
-                    />
+
+                  {/* Right Column (Logo Upload) */}
+                  <div className="lg:col-span-1 flex flex-col justify-between bg-slate-950 border border-slate-850 p-4.5 rounded-2xl">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Logo de la Distribuidora</label>
+                      <p className="text-[10px] text-slate-550 mb-3 leading-relaxed">
+                        Este logotipo se imprimirá en los comprobantes y facturas emitidas desde la Caja / POS.
+                      </p>
+
+                      {/* Drop / Drag Zone */}
+                      <div
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setIsDragOver(true);
+                        }}
+                        onDragLeave={() => setIsDragOver(false)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setIsDragOver(false);
+                          const files = e.dataTransfer.files;
+                          if (files && files.length > 0) {
+                            const file = files[0];
+                            if (file.type.startsWith('image/')) {
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                if (event.target?.result) {
+                                  setLogoUrl(event.target.result as string);
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }
+                        }}
+                        onClick={() => document.getElementById('logoFileInput')?.click()}
+                        className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 min-h-[140px] ${
+                          isDragOver 
+                            ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400' 
+                            : logoUrl 
+                              ? 'border-slate-800 bg-slate-900/40 hover:bg-slate-900/80' 
+                              : 'border-slate-800 bg-slate-950 hover:bg-slate-900/40 hover:border-slate-700'
+                        }`}
+                      >
+                        <input
+                          id="logoFileInput"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const files = e.target.files;
+                            if (files && files.length > 0) {
+                              const file = files[0];
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                if (event.target?.result) {
+                                  setLogoUrl(event.target.result as string);
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+
+                        {logoUrl ? (
+                          <div className="relative group w-full flex flex-col items-center">
+                            <img 
+                              src={logoUrl} 
+                              alt="Logo Distribuidora" 
+                              className="max-h-24 max-w-full object-contain mb-2 rounded-lg bg-white p-1 border border-slate-700/50"
+                              referrerPolicy="no-referrer"
+                            />
+                            <span className="text-[9px] text-emerald-400 font-medium">Logo configurado: Haz click o arrastra para cambiar</span>
+                          </div>
+                        ) : (
+                          <div className="space-y-2 flex flex-col items-center">
+                            <div className="w-9 h-9 rounded-full bg-slate-900 flex items-center justify-center text-slate-400">
+                              <Upload className="w-4 h-4" />
+                            </div>
+                            <div className="text-[10px] font-medium text-slate-300">
+                              Arrastra tu imagen aquí o <span className="text-emerald-400 underline">haz click</span>
+                            </div>
+                            <div className="text-[8.5px] text-slate-500">
+                              Soporta PNG, JPEG o SVG
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {logoUrl && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLogoUrl('');
+                        }}
+                        className="mt-3.5 w-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-[10px] font-semibold py-1.5 rounded-lg border border-rose-500/20 flex items-center justify-center gap-1.5 transition cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Eliminar Logotipo actual
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
