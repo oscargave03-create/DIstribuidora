@@ -47,7 +47,7 @@ service cloud.firestore {
         && data.address is string && data.address.size() <= 300
         && data.receiptFooter is string && data.receiptFooter.size() <= 300
         && data.receiptAd is string && data.receiptAd.size() <= 500
-        && (data.logoUrl == null || (data.logoUrl is string && data.logoUrl.size() <= 5000))
+        && (!data.keys().hasAll(['logoUrl']) || data.logoUrl == null || (data.logoUrl is string && data.logoUrl.size() <= 5000))
         && data.categories is list && data.categories.size() <= 20 
           && (data.categories.size() == 0 || data.categories[0] is string)
         && data.taxes is map
@@ -64,7 +64,7 @@ service cloud.firestore {
         && data.email is string && data.email.size() <= 100
         && data.displayName is string && data.displayName.size() <= 100
         && data.role is string && (data.role == "admin" || data.role == "supervisor" || data.role == "cashier" || data.role == "guest")
-        && (data.password == null || (data.password is string && data.password.size() <= 100))
+        && (!data.keys().hasAll(['password']) || data.password == null || (data.password is string && data.password.size() <= 100))
         && data.allowedTabs is map
           && data.allowedTabs.dashboard is bool
           && data.allowedTabs.pos is bool
@@ -84,14 +84,12 @@ service cloud.firestore {
       allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
       
       allow create: if isSignedIn() 
-        && request.auth.token.email_verified == true
         && isValidId(productId) 
         && isValidProduct(incoming()) 
         && incoming().createdAt == request.time
         && incoming().updatedAt == request.time;
         
       allow update: if isSignedIn() 
-        && request.auth.token.email_verified == true
         && isValidId(productId)
         && isValidProduct(incoming())
         && incoming().userId == existing().userId
@@ -99,7 +97,6 @@ service cloud.firestore {
         && incoming().updatedAt == request.time;
         
       allow delete: if isSignedIn() 
-        && request.auth.token.email_verified == true
         && existing().userId == request.auth.uid;
     }
 
@@ -108,7 +105,6 @@ service cloud.firestore {
       allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
       
       allow create: if isSignedIn() 
-        && request.auth.token.email_verified == true
         && isValidId(historyId) 
         && isValidHistory(incoming()) 
         && incoming().timestamp == request.time;
@@ -120,28 +116,33 @@ service cloud.firestore {
     match /configs/{userId} {
       allow read: if isSignedIn() && userId == request.auth.uid;
       allow create, update: if isSignedIn() 
-        && request.auth.token.email_verified == true
         && userId == request.auth.uid 
         && isValidConfig(incoming());
       allow delete: if false;
     }
 
     match /permissions/{permissionId} {
-      allow get, list: if isSignedIn() 
-        && (permissionId == request.auth.uid || get(/databases/$(database)/documents/permissions/$(request.auth.uid)).data.role == "admin");
+      allow get: if isSignedIn() 
+        && (permissionId == request.auth.uid || 
+          (exists(/databases/$(database)/documents/permissions/$(request.auth.uid)) && 
+           get(/databases/$(database)/documents/permissions/$(request.auth.uid)).data.role == "admin")
+        );
+      
+      allow list: if isSignedIn() 
+        && exists(/databases/$(database)/documents/permissions/$(request.auth.uid)) 
+        && get(/databases/$(database)/documents/permissions/$(request.auth.uid)).data.role == "admin";
       
       allow create: if isSignedIn() 
-        && request.auth.token.email_verified == true
         && permissionId == request.auth.uid 
         && isValidPermission(incoming());
         
       allow update: if isSignedIn() 
-        && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/permissions/$(request.auth.uid))
         && get(/databases/$(database)/documents/permissions/$(request.auth.uid)).data.role == "admin"
         && isValidPermission(incoming());
         
       allow delete: if isSignedIn() 
-        && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/permissions/$(request.auth.uid))
         && get(/databases/$(database)/documents/permissions/$(request.auth.uid)).data.role == "admin"
         && permissionId != request.auth.uid; // Prevent self-deletion
     }

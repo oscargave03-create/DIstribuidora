@@ -199,13 +199,15 @@ export const loginWithGoogle = async (): Promise<UserSession> => {
   if (isConfigured && auth) {
     const provider = new GoogleAuthProvider();
     const result = await signInWithPopup(auth, provider);
-    return {
+    const session: UserSession = {
       uid: result.user.uid,
       email: result.user.email || "",
       displayName: result.user.displayName || "Usuario Autorizado",
       isFirebase: true,
       emailVerified: result.user.emailVerified
     };
+    localStorage.setItem("inv_session", JSON.stringify(session));
+    return session;
   } else {
     // Local / Guest Fallback Login Mode
     const mockUser: UserSession = {
@@ -232,50 +234,56 @@ export const logoutUser = async (): Promise<void> => {
 };
 
 export const observeAuth = (onChange: (user: UserSession | null) => void) => {
-  // 1. Try reading custom passport-based sessions first
+  // 1. Emit the cached session immediately if available for fast visual loads
   const sessionStr = localStorage.getItem("inv_session");
+  let cachedUser: UserSession | null = null;
   if (sessionStr) {
     try {
-      const localUser = JSON.parse(sessionStr);
-      onChange(localUser);
-      return () => {};
+      cachedUser = JSON.parse(sessionStr);
+      onChange(cachedUser);
     } catch {
-      // ignore and carry on
+      // ignore
     }
   }
 
+  // 2. Synchronize with Firebase Auth state if active
   if (isConfigured && auth) {
     return onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        const stored = localStorage.getItem("inv_session");
-        if (!stored) {
-          onChange({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email || "",
-            displayName: firebaseUser.displayName || "Usuario Autorizado",
-            isFirebase: true,
-            emailVerified: firebaseUser.emailVerified
-          });
-        }
+        const session: UserSession = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email || "",
+          displayName: firebaseUser.displayName || "Usuario Autorizado",
+          isFirebase: true,
+          emailVerified: firebaseUser.emailVerified
+        };
+        localStorage.setItem("inv_session", JSON.stringify(session));
+        onChange(session);
       } else {
         const stored = localStorage.getItem("inv_session");
-        if (!stored) {
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            if (parsed.isFirebase) {
+              localStorage.removeItem("inv_session");
+              onChange(null);
+            }
+          } catch {
+            localStorage.removeItem("inv_session");
+            onChange(null);
+          }
+        } else {
           onChange(null);
         }
       }
     });
   } else {
-    // Local State listener trigger fallback
-    if (sessionStr) {
-      try {
-        onChange(JSON.parse(sessionStr));
-      } catch {
-        onChange(null);
-      }
+    // If not firebase, just continue using the local cached session
+    if (cachedUser) {
+      onChange(cachedUser);
     } else {
       onChange(null);
     }
-    // Return unsubscribe empty fn
     return () => {};
   }
 };
@@ -638,6 +646,15 @@ export const loginWithCustomCredentials = async (
 ): Promise<UserSession> => {
   const normUser = usernameOrEmail.trim().toLowerCase();
   
+  // Sign out from Firebase Auth to ensure we do not have a mismatched backend session!
+  if (isConfigured && auth) {
+    try {
+      await firebaseSignOut(auth);
+    } catch (e) {
+      console.error("Error signing out Firebase Auth on custom credentials login:", e);
+    }
+  }
+
   // 1. Check hardcoded/default custom credentials
   if (normUser === "admin0317" && password === "Value54321") {
     const session: UserSession = {
@@ -748,22 +765,74 @@ export const subscribeUserPermissions = (
   onData: (permissions: UserPermission[]) => void
 ) => {
   if (isOnline()) {
-    const q = query(collection(db!, "permissions"));
-    return onSnapshot(q, (snapshot) => {
-      const perms: UserPermission[] = [];
-      snapshot.forEach((doc) => {
-        perms.push({ id: doc.id, ...doc.data() } as UserPermission);
-      });
-      if (perms.length === 0) {
-        // Set default permission
-        const defaultPerm = { ...DEFAULT_USER_PERMISSIONS[0], id: userId };
-        setDoc(doc(db!, "permissions", userId), defaultPerm).catch(err => console.error("Error seeding default perm:", err));
-        perms.push(defaultPerm);
+    // 1. Subscribe to the personal permission document first so we bypass list queries for non-admins
+    const personalDocRef = doc(db!, "permissions", userId);
+    let personalPerm: UserPermission | null = null;
+    let otherPerms: UserPermission[] = [];
+
+    const unsubPersonal = onSnapshot(personalDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        personalPerm = { id: docSnap.id, ...docSnap.data() } as UserPermission;
+        onData([personalPerm, ...otherPerms.filter(p => p.id !== userId)]);
+      } else {
+        // Automatically seed default config and owner permission for Google users
+        const defaultPerm: UserPermission = {
+          id: userId,
+          email: auth?.currentUser?.email || "usuario@correo.com",
+          displayName: auth?.currentUser?.displayName || "Usuario Autorizado",
+          role: "admin", // Seed initial Google login as admin so they can configure system
+          allowedTabs: {
+            dashboard: true,
+            pos: true,
+            alerts: true,
+            reports: true,
+            admin: true
+          },
+          allowedActions: {
+            create_product: true,
+            edit_product: true,
+            delete_product: true,
+            adjust_stock: true,
+            process_sale: true
+          }
+        };
+        setDoc(personalDocRef, defaultPerm)
+          .then(() => {
+            personalPerm = defaultPerm;
+            onData([defaultPerm, ...otherPerms.filter(p => p.id !== userId)]);
+          })
+          .catch(err => console.error("Error seeding default permission:", err));
       }
-      onData(perms);
     }, (error) => {
-      console.error("User Permissions sync error:", error);
+      console.error("Personal Permission fetch error:", error);
     });
+
+    // 2. Try to subscribe to the full collection (only works for authenticated admins)
+    const q = query(collection(db!, "permissions"));
+    const unsubAll = onSnapshot(q, (snapshot) => {
+      const list: UserPermission[] = [];
+      snapshot.forEach((doc) => {
+        list.push({ id: doc.id, ...doc.data() } as UserPermission);
+      });
+      otherPerms = list.filter(p => p.id !== userId);
+      if (personalPerm) {
+        onData([personalPerm, ...otherPerms]);
+      } else {
+        onData(list);
+      }
+    }, (error) => {
+      // Silently swallow permission error if non-admin - they shouldn't query other accounts' permissions anyway
+      if (error?.message?.includes("permissions") || error?.code === "permission-denied" || String(error).includes("permission")) {
+        console.log("User is not an admin, restricted user list loaded.");
+      } else {
+        console.error("User Permissions list sync error:", error);
+      }
+    });
+
+    return () => {
+      unsubPersonal();
+      unsubAll();
+    };
   } else {
     // Offline local storage fallback
     const getLocalPermissions = (): UserPermission[] => {
