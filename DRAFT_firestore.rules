@@ -1,0 +1,79 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // Global Helpers
+    function isSignedIn() { return request.auth != null; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    
+    function isValidProduct(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 200
+        && data.sku is string && data.sku.size() >= 1 && data.sku.size() <= 64 && data.sku.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.description is string && data.description.size() <= 1000
+        && data.quantity is number && data.quantity >= 0
+        && data.minQuantity is number && data.minQuantity >= 0
+        && data.price is number && data.price >= 0
+        && data.category is string && data.category.size() >= 1 && data.category.size() <= 100
+        && data.userId is string && data.userId == request.auth.uid;
+    }
+
+    function isValidHistory(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.productId is string && data.productId.size() <= 128
+        && data.productName is string && data.productName.size() <= 200
+        && data.userId is string && data.userId == request.auth.uid
+        && data.userName is string && data.userName.size() <= 200
+        && data.type is string && data.type.size() <= 32
+        && data.changeAmount is number
+        && data.previousQuantity is number && data.previousQuantity >= 0
+        && data.newQuantity is number && data.newQuantity >= 0
+        && data.notes is string && data.notes.size() <= 500;
+    }
+
+    match /products/{productId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      allow create: if isSignedIn() 
+        && request.auth.token.email_verified == true
+        && isValidId(productId) 
+        && isValidProduct(incoming()) 
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+        
+      allow update: if isSignedIn() 
+        && request.auth.token.email_verified == true
+        && isValidId(productId)
+        && isValidProduct(incoming())
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+        
+      allow delete: if isSignedIn() 
+        && request.auth.token.email_verified == true
+        && existing().userId == request.auth.uid;
+    }
+
+    match /history/{historyId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      allow create: if isSignedIn() 
+        && request.auth.token.email_verified == true
+        && isValidId(historyId) 
+        && isValidHistory(incoming()) 
+        && incoming().timestamp == request.time;
+        
+      // Read-only audit log
+      allow update, delete: if false;
+    }
+  }
+}

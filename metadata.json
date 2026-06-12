@@ -1,0 +1,6 @@
+{
+  "name": "Sistema de Inventario",
+  "description": "Sistema completo para control de stock en tiempo real, alertas de bajo inventario, reportes detallados y acceso seguro de usuarios.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

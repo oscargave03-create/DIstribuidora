@@ -1,0 +1,52 @@
+{
+  "entities": {
+    "products": {
+      "title": "Products",
+      "description": "Inventory products in the stock tracking database",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "sku": { "type": "string" },
+        "description": { "type": "string" },
+        "quantity": { "type": "number" },
+        "minQuantity": { "type": "number" },
+        "price": { "type": "number" },
+        "category": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "name", "sku", "quantity", "minQuantity", "price", "category", "createdAt", "updatedAt", "userId"]
+    },
+    "history": {
+      "title": "History",
+      "description": "Stock audit log records detailing movements and edits",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "type": { "type": "string" },
+        "changeAmount": { "type": "number" },
+        "previousQuantity": { "type": "number" },
+        "newQuantity": { "type": "number" },
+        "notes": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "productId", "productName", "userId", "userName", "type", "changeAmount", "previousQuantity", "newQuantity", "timestamp"]
+    }
+  },
+  "firestore": {
+    "products/{productId}": {
+      "schema": { "$ref": "#/entities/products" },
+      "description": "Stores individual products in the inventory"
+    },
+    "history/{historyId}": {
+      "schema": { "$ref": "#/entities/history" },
+      "description": "Stores stock movement and modification logging"
+    }
+  }
+}
