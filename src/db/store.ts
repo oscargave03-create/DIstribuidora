@@ -283,13 +283,17 @@ export const observeAuth = (onChange: (user: UserSession | null) => void) => {
 // -----------------------------------------
 // Products and History API (Realtime Sync)
 // -----------------------------------------
+export const isOnline = (): boolean => {
+  return !!(isConfigured && db && auth?.currentUser);
+};
+
 export const subscribeProducts = (
   userId: string, 
   onData: (products: Product[]) => void,
   onError?: (err: any) => void
 ) => {
-  if (isConfigured && db) {
-    const q = query(collection(db, "products"), where("userId", "==", userId));
+  if (isOnline()) {
+    const q = query(collection(db!, "products"), where("userId", "==", userId));
     return onSnapshot(q, (snapshot) => {
       const products: Product[] = [];
       snapshot.forEach((doc) => {
@@ -320,8 +324,8 @@ export const subscribeHistory = (
   onData: (logs: StockHistory[]) => void,
   onError?: (err: any) => void
 ) => {
-  if (isConfigured && db) {
-    const q = query(collection(db, "history"), where("userId", "==", userId));
+  if (isOnline()) {
+    const q = query(collection(db!, "history"), where("userId", "==", userId));
     return onSnapshot(q, (snapshot) => {
       const history: StockHistory[] = [];
       snapshot.forEach((doc) => {
@@ -386,16 +390,16 @@ export const storeAddProduct = async (
     timestamp: now
   };
 
-  if (isConfigured && db) {
+  if (isOnline()) {
     try {
       // Set Product doc
-      await setDoc(doc(db, "products", pId), { 
+      await setDoc(doc(db!, "products", pId), { 
         ...newProduct,
         createdAt: now, // will be request.time verified by security rules
         updatedAt: now
       });
       // Set History doc
-      await setDoc(doc(db, "history", logId), {
+      await setDoc(doc(db!, "history", logId), {
         ...newLog,
         timestamp: now
       });
@@ -426,10 +430,10 @@ export const storeUpdateProduct = async (
 ): Promise<void> => {
   const now = new Date().toISOString();
 
-  if (isConfigured && db) {
+  if (isOnline()) {
     try {
       // Find existing product first for historical checks
-      const productsRef = collection(db, "products");
+      const productsRef = collection(db!, "products");
       const productDocRef = doc(productsRef, productId);
       
       // Update doc
@@ -538,10 +542,10 @@ export const storeDeleteProduct = async (
     timestamp: now
   };
 
-  if (isConfigured && db) {
+  if (isOnline()) {
     try {
-      await deleteDoc(doc(db, "products", productId));
-      await setDoc(doc(db, "history", logId), deleteLog);
+      await deleteDoc(doc(db!, "products", productId));
+      await setDoc(doc(db!, "history", logId), deleteLog);
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `products/${productId}`);
     }
@@ -640,7 +644,7 @@ export const loginWithCustomCredentials = async (
       uid: "admin-0317-uid",
       email: "admin0317",
       displayName: "Admin0317 (Administrador Principal)",
-      isFirebase: isConfigured,
+      isFirebase: false,
       emailVerified: true
     };
     localStorage.setItem("inv_session", JSON.stringify(session));
@@ -652,58 +656,27 @@ export const loginWithCustomCredentials = async (
       uid: "guest-user-123",
       email: "admin@inventario.com",
       displayName: "Oscar Guevara (Supervisor)",
-      isFirebase: isConfigured,
+      isFirebase: false,
       emailVerified: true
     };
     localStorage.setItem("inv_session", JSON.stringify(session));
     return session;
   }
 
-  // 2. Query Firestore / local DB for other custom users
-  if (isConfigured && db) {
-    try {
-      const { collection, getDocs } = await import('firebase/firestore');
-      const querySnapshot = await getDocs(collection(db, "permissions"));
-      let foundUser: UserPermission | null = null;
-      
-      querySnapshot.forEach((doc) => {
-        const u = doc.data() as UserPermission;
-        if ((u.email.toLowerCase() === normUser || doc.id.toLowerCase() === normUser) && u.password === password) {
-          foundUser = { ...u, id: doc.id };
-        }
-      });
-
-      if (foundUser) {
-        const userPerm = foundUser as UserPermission;
-        const session: UserSession = {
-          uid: userPerm.id,
-          email: userPerm.email,
-          displayName: userPerm.displayName,
-          isFirebase: true,
-          emailVerified: true
-        };
-        localStorage.setItem("inv_session", JSON.stringify(session));
-        return session;
-      }
-    } catch (err) {
-      console.error("Error looking up custom user in Firestore:", err);
-    }
-  } else {
-    // Offline local storage credentials lookup
-    const data = localStorage.getItem(`app_permissions_list`);
-    const list: UserPermission[] = data ? JSON.parse(data) : DEFAULT_USER_PERMISSIONS;
-    const found = list.find(u => (u.email.toLowerCase() === normUser || u.id.toLowerCase() === normUser) && u.password === password);
-    if (found) {
-      const session: UserSession = {
-        uid: found.id,
-        email: found.email,
-        displayName: found.displayName,
-        isFirebase: false,
-        emailVerified: true
-      };
-      localStorage.setItem("inv_session", JSON.stringify(session));
-      return session;
-    }
+  // 2. Query local DB / LocalStorage for other custom users (to avoid unauthenticated Firestore requests)
+  const data = localStorage.getItem(`app_permissions_list`);
+  const list: UserPermission[] = data ? JSON.parse(data) : DEFAULT_USER_PERMISSIONS;
+  const found = list.find(u => (u.email.toLowerCase() === normUser || u.id.toLowerCase() === normUser) && u.password === password);
+  if (found) {
+    const session: UserSession = {
+      uid: found.id,
+      email: found.email,
+      displayName: found.displayName,
+      isFirebase: false,
+      emailVerified: true
+    };
+    localStorage.setItem("inv_session", JSON.stringify(session));
+    return session;
   }
 
   throw new Error("Credenciales inválidas. Verifique su usuario o contraseña.");
@@ -713,8 +686,8 @@ export const subscribeConfig = (
   userId: string,
   onData: (config: AppConfig) => void
 ) => {
-  if (isConfigured && db) {
-    const docRef = doc(db, "configs", userId);
+  if (isOnline()) {
+    const docRef = doc(db!, "configs", userId);
     return onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
         onData(docSnap.data() as AppConfig);
@@ -756,9 +729,9 @@ export const storeUpdateConfig = async (
   userId: string,
   config: AppConfig
 ): Promise<void> => {
-  if (isConfigured && db) {
+  if (isOnline()) {
     try {
-      await setDoc(doc(db, "configs", userId), config);
+      await setDoc(doc(db!, "configs", userId), config);
     } catch (error) {
       console.error("Error updating firestore config:", error);
     }
@@ -774,8 +747,8 @@ export const subscribeUserPermissions = (
   userId: string,
   onData: (permissions: UserPermission[]) => void
 ) => {
-  if (isConfigured && db) {
-    const q = query(collection(db, "permissions"));
+  if (isOnline()) {
+    const q = query(collection(db!, "permissions"));
     return onSnapshot(q, (snapshot) => {
       const perms: UserPermission[] = [];
       snapshot.forEach((doc) => {
@@ -784,7 +757,7 @@ export const subscribeUserPermissions = (
       if (perms.length === 0) {
         // Set default permission
         const defaultPerm = { ...DEFAULT_USER_PERMISSIONS[0], id: userId };
-        setDoc(doc(db, "permissions", userId), defaultPerm).catch(err => console.error("Error seeding default perm:", err));
+        setDoc(doc(db!, "permissions", userId), defaultPerm).catch(err => console.error("Error seeding default perm:", err));
         perms.push(defaultPerm);
       }
       onData(perms);
@@ -849,9 +822,9 @@ export const subscribeUserPermissions = (
 export const storeUpdateUserPermission = async (
   permission: UserPermission
 ): Promise<void> => {
-  if (isConfigured && db) {
+  if (isOnline()) {
     try {
-      await setDoc(doc(db, "permissions", permission.id), permission);
+      await setDoc(doc(db!, "permissions", permission.id), permission);
     } catch (error) {
       console.error("Error saving user permission in Firestore:", error);
     }
@@ -872,9 +845,9 @@ export const storeUpdateUserPermission = async (
 export const storeDeleteUserPermission = async (
   id: string
 ): Promise<void> => {
-  if (isConfigured && db) {
+  if (isOnline()) {
     try {
-      await deleteDoc(doc(db, "permissions", id));
+      await deleteDoc(doc(db!, "permissions", id));
     } catch (error) {
       console.error("Error deleting user permission in Firestore:", error);
     }
