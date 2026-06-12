@@ -585,6 +585,7 @@ export const DEFAULT_CONFIG: AppConfig = {
   receiptFooter: "¡Gracias por abastecerse con nosotros!",
   receiptAd: "Stock descontado correctamente del almacén de distribución.",
   categories: ["Abarrotes", "Lácteos y Quesos", "Conservas y Enlatados"],
+  isBlocked: false,
   taxes: {
     generalRate: 7,
     liquorRate: 10,

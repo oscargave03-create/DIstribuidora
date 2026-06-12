@@ -18,7 +18,9 @@ import {
   CheckSquare,
   Square,
   Upload,
-  Image
+  Image,
+  Lock,
+  Unlock
 } from 'lucide-react';
 import { AppConfig, UserPermission } from '../types';
 
@@ -41,6 +43,8 @@ export default function AdminPanel({
 }: AdminPanelProps) {
   // Tabs within administration
   const [subTab, setSubTab] = useState<'system' | 'categories' | 'users'>('system');
+
+  const isSuperAdmin = permissions.find(p => p.id === currentUserUid)?.email.toLowerCase() === 'oscargave03@gmail.com';
 
   // Load configs local states
   const [systemTitle, setSystemTitle] = useState(config.systemTitle);
@@ -286,6 +290,74 @@ export default function AdminPanel({
           {/* ==================== SUB-TAB 1: SYSTEM & TEXTS CONFIG ==================== */}
           {subTab === 'system' && (
             <form onSubmit={handleSaveConfig} className="space-y-8">
+              
+              {/* Seccion Super Admin Bloqueo / Control de Demo */}
+              {isSuperAdmin && (
+                <div className={`p-6 rounded-2xl border transition-all duration-300 ${
+                  config.isBlocked 
+                    ? 'bg-rose-500/10 border-rose-500/20 shadow-lg shadow-rose-500/5' 
+                    : 'bg-emerald-500/5 border-emerald-500/10 hover:border-emerald-500/20'
+                }`}>
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="space-y-2 max-w-xl">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono font-bold tracking-wider ${
+                          config.isBlocked ? 'bg-rose-500/20 text-rose-450' : 'bg-emerald-500/20 text-emerald-400'
+                        }`}>
+                          CONTROL SUPREMO DE TRIAL
+                        </span>
+                        <span className="text-slate-500 text-xs">|</span>
+                        <span className="text-slate-400 text-xs font-medium">Exclusivo para Oscar Guevara</span>
+                      </div>
+                      <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                        {config.isBlocked ? (
+                          <>
+                            <Lock className="w-4 h-4 text-rose-500" />
+                            <span>La Aplicación se encuentra BLOQUEADA (Demo Expirado)</span>
+                          </>
+                        ) : (
+                          <>
+                            <Unlock className="w-4 h-4 text-emerald-400" />
+                            <span>La Aplicación se encuentra ACTIVA (Demo Operativo)</span>
+                          </>
+                        )}
+                      </h4>
+                      <p className="text-xs text-slate-400 leading-relaxed">
+                        Como creador y promotor del software, tienes la potestad de suspender o habilitar el acceso a este inventario. Al bloquearla, los cajeros y supervisores verán únicamente la pantalla informativa de bloqueo con tus datos para adquisición de licencias.
+                      </p>
+                    </div>
+                    
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const updated: AppConfig = {
+                          ...config,
+                          isBlocked: !config.isBlocked
+                        };
+                        await onUpdateConfig(updated);
+                      }}
+                      className={`flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs font-bold transition-all relative overflow-hidden shadow-md cursor-pointer select-none ${
+                        config.isBlocked 
+                          ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold tracking-wide' 
+                          : 'bg-rose-500 hover:bg-rose-450 text-white font-semibold'
+                      }`}
+                    >
+                      {config.isBlocked ? (
+                        <>
+                          <Unlock className="w-4 h-4 mr-1" />
+                          <span>ACTIVAR / DESBLOQUEAR APLICACIÓN</span>
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="w-4 h-4 mr-1" />
+                          <span>BLOQUEAR APP (CONGELAR ACESO)</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <h3 className="text-sm font-bold text-slate-200 border-b border-slate-800 pb-2 mb-4 uppercase tracking-wider flex items-center gap-1.5">
                   <Type className="w-4 h-4 text-teal-400" /> Conf. de Textos del Sitio Principal

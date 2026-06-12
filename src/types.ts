@@ -67,6 +67,7 @@ export interface AppConfig {
   receiptAd: string;
   categories: string[];
   logoUrl?: string; // Base64 or image URL for distributor logo
+  isBlocked?: boolean; // Trial/Demo expiration block field
   taxes: {
     generalRate: number;
     liquorRate: number;

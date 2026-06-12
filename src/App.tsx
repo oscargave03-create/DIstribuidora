@@ -19,7 +19,9 @@ import {
   Layers,
   X,
   Trash2,
-  ShoppingCart
+  ShoppingCart,
+  Lock,
+  Unlock
 } from 'lucide-react';
 
 import { 
@@ -142,6 +144,10 @@ export default function App() {
   }, [products]);
 
   // Memoized user-level granular authorizations
+  const isSuperAdmin = useMemo(() => {
+    return !!(user && user.email?.toLowerCase() === 'oscargave03@gmail.com');
+  }, [user]);
+
   const userPermissions = useMemo<UserPermission | null>(() => {
     if (!user) return null;
     return allPermissionsList.find(p => p.id === user.uid) || 
@@ -234,6 +240,70 @@ export default function App() {
 
   if (!user) {
     return <LoginView onLoginSuccess={(u) => setUser(u)} />;
+  }
+
+  // Trial / demo lock-out block screen
+  if (appConfig?.isBlocked && !isSuperAdmin) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center antialiased select-none">
+        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+          {/* Subtle gradient light indicator */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-1 bg-gradient-to-r from-rose-500 via-red-500 to-rose-500 blur-sm" />
+          
+          <div className="w-16 h-16 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-rose-500/5 animate-pulse">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 opacity-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+
+          <h2 className="text-xl font-bold font-display text-white mb-2 tracking-tight">
+            SISTEMA SUSPENDIDO
+          </h2>
+          <span className="text-[10px] text-rose-450 font-black mb-6 tracking-widest uppercase bg-rose-500/10 py-1.5 px-3 rounded-full inline-block border border-rose-500/10">
+            Período de Demostración Finalizado
+          </span>
+
+          <p className="text-xs text-slate-400 leading-relaxed mb-6">
+            El tiempo de prueba programado para esta entidad o empresa ha culminado, o el servicio ha sido suspendido temporalmente por el administrador / distribuidor del software.
+          </p>
+
+          <div className="bg-slate-950 border border-slate-850 rounded-2xl p-4 text-left space-y-3 mb-6">
+            <h3 className="text-[10px] font-bold text-slate-450 tracking-wider uppercase border-b border-slate-900 pb-2 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse" />
+              Contacto de Soporte y Licencias
+            </h3>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-550">Soporte Técnico:</span>
+                <span className="font-semibold text-slate-205">Oscar Guevara</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-550">Correo de Contacto:</span>
+                <span className="font-mono font-semibold text-teal-400 select-all">oscargave03@gmail.com</span>
+              </div>
+              <div className="flex items-center justify-between text-xs border-t border-slate-900 pt-2 mt-2">
+                <span className="text-slate-550">Empresa / Entidad:</span>
+                <span className="font-semibold text-slate-300 truncate max-w-[170px]">{appConfig?.companyName || "Distribuidora"}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={handleLogout}
+              className="w-full h-11 flex items-center justify-center gap-2 px-5 py-3 bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition cursor-pointer border border-slate-700"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Cerrar Sesión</span>
+            </button>
+          </div>
+        </div>
+
+        <p className="text-[10px] text-slate-600 font-mono mt-8 uppercase">
+          Plataforma de Inventarios y kardex &copy; {new Date().getFullYear()}
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -338,6 +408,37 @@ export default function App() {
 
           {/* Right User account settings block */}
           <div className="flex items-center gap-4">
+            {isSuperAdmin && (
+              <button
+                onClick={async () => {
+                  if (appConfig) {
+                    await storeUpdateConfig(user.uid, {
+                      ...appConfig,
+                      isBlocked: !appConfig.isBlocked
+                    });
+                  }
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2.5 rounded-xl text-[11px] md:text-xs font-extrabold transition-all cursor-pointer border select-none ${
+                  appConfig?.isBlocked
+                    ? 'bg-rose-500/15 text-rose-400 border-rose-500/35 hover:bg-rose-500/25'
+                    : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
+                }`}
+                title={appConfig?.isBlocked ? "Haga clic para DESBLOQUEAR la app para todos" : "Haga clic para BLOQUEAR la app en modo de prueba"}
+              >
+                {appConfig?.isBlocked ? (
+                  <>
+                    <Lock className="w-3.5 h-3.5 text-rose-500 animate-pulse" />
+                    <span className="hidden lg:inline">DEMO SUSPENDIDA</span>
+                  </>
+                ) : (
+                  <>
+                    <Unlock className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="hidden lg:inline">DEMO ACTIVA</span>
+                  </>
+                )}
+              </button>
+            )}
+
             <div className="hidden md:flex items-center gap-2.5 bg-slate-900 border border-slate-850 px-3.5 py-1.5 rounded-2xl">
               <div className="w-7 h-7 bg-teal-500/10 rounded-full flex items-center justify-center text-teal-400">
                 <User className="w-4 h-4" />
@@ -358,6 +459,35 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      {/* Global alert bar visible only to Oscar when system is locked */}
+      {isSuperAdmin && appConfig?.isBlocked && (
+        <div className="bg-rose-950/90 text-white px-4 py-3 text-xs font-medium flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-rose-900 shadow-lg select-none">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-2.5 w-2.5 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+            </span>
+            <span className="text-center sm:text-left text-slate-200">
+              <strong className="text-white">¡ALERTA OSCAR (REPRESENTANTE):</strong> Has activado el <span className="text-rose-450 font-bold underline">BLOQUEO DE DEMOSTRACIÓN</span>. Los terminales ordinarios y cajeros están suspendidos.
+            </span>
+          </div>
+          <button
+            onClick={async () => {
+              if (appConfig) {
+                await storeUpdateConfig(user.uid, {
+                  ...appConfig,
+                  isBlocked: false
+                });
+              }
+            }}
+            className="bg-white hover:bg-slate-100 text-rose-950 px-4 py-1.5 rounded-xl font-bold transition text-[11px] cursor-pointer shadow-md shrink-0 flex items-center gap-1.5"
+          >
+            <Unlock className="w-3.5 h-3.5" />
+            <span>DESBLOQUEAR AHORA</span>
+          </button>
+        </div>
+      )}
 
       {/* Main Container Stage */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">

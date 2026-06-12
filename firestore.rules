@@ -48,6 +48,7 @@ service cloud.firestore {
         && data.receiptFooter is string && data.receiptFooter.size() <= 300
         && data.receiptAd is string && data.receiptAd.size() <= 500
         && (!data.keys().hasAll(['logoUrl']) || data.logoUrl == null || (data.logoUrl is string && data.logoUrl.size() <= 5000))
+        && (!data.keys().hasAll(['isBlocked']) || data.isBlocked is bool)
         && data.categories is list && data.categories.size() <= 20 
           && (data.categories.size() == 0 || data.categories[0] is string)
         && data.taxes is map
