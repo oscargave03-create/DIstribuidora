@@ -23,9 +23,17 @@ interface DashboardViewProps {
   onDeleteProduct: (product: Product) => void;
   onQuickAdjust: (product: Product) => void;
   activeAlertsCount: number;
+  categoriesList?: string[];
+  allowedActions?: {
+    create_product: boolean;
+    edit_product: boolean;
+    delete_product: boolean;
+    adjust_stock: boolean;
+    process_sale: boolean;
+  };
 }
 
-const CATEGORIES = ["Todos", "Abarrotes", "Lácteos y Quesos", "Carnes y Embutidos", "Bebidas y Jugos", "Snacks y Dulces", "Conservas y Enlatados", "Licores", "Tabaco", "Limpieza y Hogar", "Otros"];
+const DEFAULT_CATEGORIES = ["Todos", "Abarrotes", "Lácteos y Quesos", "Carnes y Embutidos", "Bebidas y Jugos", "Snacks y Dulces", "Conservas y Enlatados", "Licores", "Tabaco", "Limpieza y Hogar", "Otros"];
 
 export default function DashboardView({ 
   products, 
@@ -33,8 +41,12 @@ export default function DashboardView({
   onEditProduct, 
   onDeleteProduct, 
   onQuickAdjust,
-  activeAlertsCount
+  activeAlertsCount,
+  categoriesList,
+  allowedActions = { create_product: true, edit_product: true, delete_product: true, adjust_stock: true, process_sale: true }
 }: DashboardViewProps) {
+  const cats = categoriesList && categoriesList.length > 0 ? ["Todos", ...categoriesList] : DEFAULT_CATEGORIES;
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [showOnlyAlerts, setShowOnlyAlerts] = useState(false);
@@ -189,20 +201,26 @@ export default function DashboardView({
           </div>
 
           {/* Right action button */}
-          <button
-            type="button"
-            onClick={onAddProduct}
-            className="flex items-center justify-center gap-2 bg-gradient-to-tr from-teal-500 to-emerald-400 hover:scale-[1.01] active:scale-[0.99] text-slate-950 font-bold px-5 py-2.5 rounded-xl transition shadow-lg shadow-teal-500/10 text-sm cursor-pointer self-start lg:self-auto w-full lg:w-auto"
-          >
-            <Plus className="w-4 h-4 text-slate-950" />
-            <span>Dar de alta producto</span>
-          </button>
+          {allowedActions.create_product ? (
+            <button
+              type="button"
+              onClick={onAddProduct}
+              className="flex items-center justify-center gap-2 bg-gradient-to-tr from-teal-500 to-emerald-400 hover:scale-[1.01] active:scale-[0.99] text-slate-950 font-bold px-5 py-2.5 rounded-xl transition shadow-lg shadow-teal-500/10 text-sm cursor-pointer self-start lg:self-auto w-full lg:w-auto"
+            >
+              <Plus className="w-4 h-4 text-slate-950" />
+              <span>Dar de alta producto</span>
+            </button>
+          ) : (
+            <div className="text-xs text-slate-505 font-mono bg-slate-950 px-4.5 py-2.5 border border-slate-850 rounded-xl">
+              🔑 Vista de Lectura Autorizada
+            </div>
+          )}
         </div>
 
         {/* Category horizontal scroll bar */}
         <div className="flex items-center gap-2 overflow-x-auto pt-5 mt-5 border-t border-slate-850/60 no-scrollbar">
           <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold pr-2 font-mono">Familias:</span>
-          {CATEGORIES.map(cat => (
+          {cats.map(cat => (
             <button
               type="button"
               key={cat}
@@ -320,39 +338,50 @@ export default function DashboardView({
 
                         {/* Direct Stock Change Buttons */}
                         <td className="py-3.5 text-right whitespace-nowrap">
-                          <div className="inline-flex items-center gap-1.5 bg-slate-950/80 p-1 border border-slate-850 rounded-xl">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                onQuickAdjust(p);
-                              }}
-                              title="Ajustar e ingresar/retirar existencias"
-                              className="px-2 py-1 bg-slate-900 border border-slate-800 hover:border-slate-700 hover:text-white rounded-lg text-xs font-bold text-slate-400 flex items-center gap-1 cursor-pointer hover:bg-slate-800 transition"
-                            >
-                              <span>Ajustar Cantidad</span>
-                            </button>
-                          </div>
+                          {allowedActions.adjust_stock ? (
+                            <div className="inline-flex items-center gap-1.5 bg-slate-950/80 p-1 border border-slate-850 rounded-xl">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  onQuickAdjust(p);
+                                }}
+                                title="Ajustar e ingresar/retirar existencias"
+                                className="px-2 py-1 bg-slate-900 border border-slate-800 hover:border-slate-700 hover:text-white rounded-lg text-xs font-bold text-slate-400 flex items-center gap-1 cursor-pointer hover:bg-slate-800 transition"
+                              >
+                                <span>Ajustar Cantidad</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-slate-600 text-xs italic font-mono uppercase">Lector</span>
+                          )}
                         </td>
 
                         {/* Action buttons (Edit & Delete) */}
                         <td className="py-3.5 pr-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => onEditProduct(p)}
-                              className="p-1.5 rounded-lg text-slate-500 hover:text-teal-400 hover:bg-teal-500/10 transition cursor-pointer"
-                              title="Editar ficha"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => onDeleteProduct(p)}
-                              className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
-                              title="Dar de baja permanently"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {allowedActions.edit_product && (
+                              <button
+                                type="button"
+                                onClick={() => onEditProduct(p)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-teal-400 hover:bg-teal-500/10 transition cursor-pointer"
+                                title="Editar ficha"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                            )}
+                            {allowedActions.delete_product && (
+                              <button
+                                type="button"
+                                onClick={() => onDeleteProduct(p)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+                                title="Dar de baja permanently"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                            {!allowedActions.edit_product && !allowedActions.delete_product && (
+                              <span className="text-[10px] text-slate-500 italic font-mono uppercase">Restringido</span>
+                            )}
                           </div>
                         </td>
                       </motion.tr>

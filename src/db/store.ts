@@ -15,7 +15,7 @@ import {
   onAuthStateChanged 
 } from 'firebase/auth';
 import { db, auth, isConfigured } from '../firebase';
-import { Product, StockHistory, UserSession } from '../types';
+import { Product, StockHistory, UserSession, AppConfig, UserPermission } from '../types';
 
 export enum OperationType {
   CREATE = 'create',
@@ -221,31 +221,51 @@ export const loginWithGoogle = async (): Promise<UserSession> => {
 };
 
 export const logoutUser = async (): Promise<void> => {
+  localStorage.removeItem("inv_session");
   if (isConfigured && auth) {
-    await firebaseSignOut(auth);
-  } else {
-    localStorage.removeItem("inv_session");
+    try {
+      await firebaseSignOut(auth);
+    } catch (err) {
+      console.error("Firebase logout error:", err);
+    }
   }
 };
 
 export const observeAuth = (onChange: (user: UserSession | null) => void) => {
+  // 1. Try reading custom passport-based sessions first
+  const sessionStr = localStorage.getItem("inv_session");
+  if (sessionStr) {
+    try {
+      const localUser = JSON.parse(sessionStr);
+      onChange(localUser);
+      return () => {};
+    } catch {
+      // ignore and carry on
+    }
+  }
+
   if (isConfigured && auth) {
     return onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        onChange({
-          uid: firebaseUser.uid,
-          email: firebaseUser.email || "",
-          displayName: firebaseUser.displayName || "Usuario Autorizado",
-          isFirebase: true,
-          emailVerified: firebaseUser.emailVerified
-        });
+        const stored = localStorage.getItem("inv_session");
+        if (!stored) {
+          onChange({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email || "",
+            displayName: firebaseUser.displayName || "Usuario Autorizado",
+            isFirebase: true,
+            emailVerified: firebaseUser.emailVerified
+          });
+        }
       } else {
-        onChange(null);
+        const stored = localStorage.getItem("inv_session");
+        if (!stored) {
+          onChange(null);
+        }
       }
     });
   } else {
-    // Local State listener trigger
-    const sessionStr = localStorage.getItem("inv_session");
+    // Local State listener trigger fallback
     if (sessionStr) {
       try {
         onChange(JSON.parse(sessionStr));
@@ -536,5 +556,333 @@ export const storeDeleteProduct = async (
     saveLocalHistory(userId, history);
 
     window.dispatchEvent(new Event("local_inventory_update"));
+  }
+};
+
+// -----------------------------------------
+// Application Config & Permissions Api (Default Config and CRUDS)
+// -----------------------------------------
+
+export const DEFAULT_CONFIG: AppConfig = {
+  systemTitle: "Catálogo de Inventario",
+  systemSubtitle: "Ctrl. de Stock",
+  companyName: "DISTRIBUIDORA DE ALIMENTOS",
+  ruc: "1792348574001",
+  telephone: "(02) 299-900",
+  address: "Quito, Ecuador",
+  receiptFooter: "¡Gracias por abastecerse con nosotros!",
+  receiptAd: "Stock descontado correctamente del almacén de distribución.",
+  categories: ["Abarrotes", "Lácteos y Quesos", "Conservas y Enlatados"],
+  taxes: {
+    generalRate: 7,
+    liquorRate: 10,
+    tobaccoRate: 15,
+    generalName: "Impuesto Artículos (7%)",
+    liquorName: "Impuesto Licores (10%)",
+    tobaccoName: "Impuesto Tabaco (15%)"
+  }
+};
+
+const DEFAULT_USER_PERMISSIONS: UserPermission[] = [
+  {
+    id: "admin-0317-uid",
+    email: "admin0317",
+    displayName: "Admin0317 (Administrador Principal)",
+    role: "admin",
+    password: "Value54321",
+    allowedTabs: {
+      dashboard: true,
+      pos: true,
+      alerts: true,
+      reports: true,
+      admin: true
+    },
+    allowedActions: {
+      create_product: true,
+      edit_product: true,
+      delete_product: true,
+      adjust_stock: true,
+      process_sale: true
+    }
+  },
+  {
+    id: "guest-user-123",
+    email: "demo@inventario-app.com",
+    displayName: "Administrador de Stock",
+    role: "admin",
+    password: "admin123",
+    allowedTabs: {
+      dashboard: true,
+      pos: true,
+      alerts: true,
+      reports: true,
+      admin: true
+    },
+    allowedActions: {
+      create_product: true,
+      edit_product: true,
+      delete_product: true,
+      adjust_stock: true,
+      process_sale: true
+    }
+  }
+];
+
+export const loginWithCustomCredentials = async (
+  usernameOrEmail: string,
+  password: string
+): Promise<UserSession> => {
+  const normUser = usernameOrEmail.trim().toLowerCase();
+  
+  // 1. Check hardcoded/default custom credentials
+  if (normUser === "admin0317" && password === "Value54321") {
+    const session: UserSession = {
+      uid: "admin-0317-uid",
+      email: "admin0317",
+      displayName: "Admin0317 (Administrador Principal)",
+      isFirebase: isConfigured,
+      emailVerified: true
+    };
+    localStorage.setItem("inv_session", JSON.stringify(session));
+    return session;
+  }
+
+  if (normUser === "admin@inventario.com" && password === "admin123") {
+    const session: UserSession = {
+      uid: "guest-user-123",
+      email: "admin@inventario.com",
+      displayName: "Oscar Guevara (Supervisor)",
+      isFirebase: isConfigured,
+      emailVerified: true
+    };
+    localStorage.setItem("inv_session", JSON.stringify(session));
+    return session;
+  }
+
+  // 2. Query Firestore / local DB for other custom users
+  if (isConfigured && db) {
+    try {
+      const { collection, getDocs } = await import('firebase/firestore');
+      const querySnapshot = await getDocs(collection(db, "permissions"));
+      let foundUser: UserPermission | null = null;
+      
+      querySnapshot.forEach((doc) => {
+        const u = doc.data() as UserPermission;
+        if ((u.email.toLowerCase() === normUser || doc.id.toLowerCase() === normUser) && u.password === password) {
+          foundUser = { ...u, id: doc.id };
+        }
+      });
+
+      if (foundUser) {
+        const userPerm = foundUser as UserPermission;
+        const session: UserSession = {
+          uid: userPerm.id,
+          email: userPerm.email,
+          displayName: userPerm.displayName,
+          isFirebase: true,
+          emailVerified: true
+        };
+        localStorage.setItem("inv_session", JSON.stringify(session));
+        return session;
+      }
+    } catch (err) {
+      console.error("Error looking up custom user in Firestore:", err);
+    }
+  } else {
+    // Offline local storage credentials lookup
+    const data = localStorage.getItem(`app_permissions_list`);
+    const list: UserPermission[] = data ? JSON.parse(data) : DEFAULT_USER_PERMISSIONS;
+    const found = list.find(u => (u.email.toLowerCase() === normUser || u.id.toLowerCase() === normUser) && u.password === password);
+    if (found) {
+      const session: UserSession = {
+        uid: found.id,
+        email: found.email,
+        displayName: found.displayName,
+        isFirebase: false,
+        emailVerified: true
+      };
+      localStorage.setItem("inv_session", JSON.stringify(session));
+      return session;
+    }
+  }
+
+  throw new Error("Credenciales inválidas. Verifique su usuario o contraseña.");
+};
+
+export const subscribeConfig = (
+  userId: string,
+  onData: (config: AppConfig) => void
+) => {
+  if (isConfigured && db) {
+    const docRef = doc(db, "configs", userId);
+    return onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        onData(docSnap.data() as AppConfig);
+      } else {
+        // Automatically save initial config
+        setDoc(docRef, DEFAULT_CONFIG).catch(err => console.error("Error setting default config: ", err));
+        onData(DEFAULT_CONFIG);
+      }
+    }, (error) => {
+      console.error("Firestore Config error:", error);
+    });
+  } else {
+    // Local storage fallback
+    const getLocalConfig = (): AppConfig => {
+      const data = localStorage.getItem(`app_config_${userId}`);
+      if (!data) {
+        localStorage.setItem(`app_config_${userId}`, JSON.stringify(DEFAULT_CONFIG));
+        return DEFAULT_CONFIG;
+      }
+      try {
+        return JSON.parse(data);
+      } catch {
+        return DEFAULT_CONFIG;
+      }
+    };
+    onData(getLocalConfig());
+
+    const handleStorageChange = () => {
+      onData(getLocalConfig());
+    };
+    window.addEventListener("local_config_update", handleStorageChange);
+    return () => {
+      window.removeEventListener("local_config_update", handleStorageChange);
+    };
+  }
+};
+
+export const storeUpdateConfig = async (
+  userId: string,
+  config: AppConfig
+): Promise<void> => {
+  if (isConfigured && db) {
+    try {
+      await setDoc(doc(db, "configs", userId), config);
+    } catch (error) {
+      console.error("Error updating firestore config:", error);
+    }
+  } else {
+    localStorage.setItem(`app_config_${userId}`, JSON.stringify(config));
+    window.dispatchEvent(new Event("local_config_update"));
+    // Trigger products updates just in case categories listings need sync
+    window.dispatchEvent(new Event("local_inventory_update"));
+  }
+};
+
+export const subscribeUserPermissions = (
+  userId: string,
+  onData: (permissions: UserPermission[]) => void
+) => {
+  if (isConfigured && db) {
+    const q = query(collection(db, "permissions"));
+    return onSnapshot(q, (snapshot) => {
+      const perms: UserPermission[] = [];
+      snapshot.forEach((doc) => {
+        perms.push({ id: doc.id, ...doc.data() } as UserPermission);
+      });
+      if (perms.length === 0) {
+        // Set default permission
+        const defaultPerm = { ...DEFAULT_USER_PERMISSIONS[0], id: userId };
+        setDoc(doc(db, "permissions", userId), defaultPerm).catch(err => console.error("Error seeding default perm:", err));
+        perms.push(defaultPerm);
+      }
+      onData(perms);
+    }, (error) => {
+      console.error("User Permissions sync error:", error);
+    });
+  } else {
+    // Offline local storage fallback
+    const getLocalPermissions = (): UserPermission[] => {
+      const data = localStorage.getItem(`app_permissions_list`);
+      if (!data) {
+        localStorage.setItem(`app_permissions_list`, JSON.stringify(DEFAULT_USER_PERMISSIONS));
+        return DEFAULT_USER_PERMISSIONS;
+      }
+      try {
+        return JSON.parse(data);
+      } catch {
+        return DEFAULT_USER_PERMISSIONS;
+      }
+    };
+
+    const currentList = getLocalPermissions();
+    // Guarantee that at least the current user exists in permissions list
+    const hasCurrentUser = currentList.some(p => p.id === userId);
+    if (!hasCurrentUser) {
+      const newUserPerm: UserPermission = {
+        id: userId,
+        email: "demo@inventario-app.com",
+        displayName: "Usuario Administrador",
+        role: "admin",
+        allowedTabs: {
+          dashboard: true,
+          pos: true,
+          alerts: true,
+          reports: true,
+          admin: true
+        },
+        allowedActions: {
+          create_product: true,
+          edit_product: true,
+          delete_product: true,
+          adjust_stock: true,
+          process_sale: true
+        }
+      };
+      currentList.push(newUserPerm);
+      localStorage.setItem(`app_permissions_list`, JSON.stringify(currentList));
+    }
+
+    onData(currentList);
+
+    const handleStorageChange = () => {
+      onData(getLocalPermissions());
+    };
+    window.addEventListener("local_permissions_update", handleStorageChange);
+    return () => {
+      window.removeEventListener("local_permissions_update", handleStorageChange);
+    };
+  }
+};
+
+export const storeUpdateUserPermission = async (
+  permission: UserPermission
+): Promise<void> => {
+  if (isConfigured && db) {
+    try {
+      await setDoc(doc(db, "permissions", permission.id), permission);
+    } catch (error) {
+      console.error("Error saving user permission in Firestore:", error);
+    }
+  } else {
+    const data = localStorage.getItem(`app_permissions_list`);
+    let list: UserPermission[] = data ? JSON.parse(data) : [];
+    const idx = list.findIndex(p => p.id === permission.id);
+    if (idx !== -1) {
+      list[idx] = permission;
+    } else {
+      list.push(permission);
+    }
+    localStorage.setItem(`app_permissions_list`, JSON.stringify(list));
+    window.dispatchEvent(new Event("local_permissions_update"));
+  }
+};
+
+export const storeDeleteUserPermission = async (
+  id: string
+): Promise<void> => {
+  if (isConfigured && db) {
+    try {
+      await deleteDoc(doc(db, "permissions", id));
+    } catch (error) {
+      console.error("Error deleting user permission in Firestore:", error);
+    }
+  } else {
+    const data = localStorage.getItem(`app_permissions_list`);
+    let list: UserPermission[] = data ? JSON.parse(data) : [];
+    list = list.filter(p => p.id !== id);
+    localStorage.setItem(`app_permissions_list`, JSON.stringify(list));
+    window.dispatchEvent(new Event("local_permissions_update"));
   }
 };

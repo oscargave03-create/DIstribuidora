@@ -15,7 +15,7 @@ import {
   Hash,
   Printer
 } from 'lucide-react';
-import { Product } from '../types';
+import { Product, AppConfig } from '../types';
 
 interface PointOfSaleViewProps {
   products: Product[];
@@ -24,6 +24,14 @@ interface PointOfSaleViewProps {
     newQty: number, 
     adjustReason: { changeAmount: number, notes: string }
   ) => Promise<void>;
+  config?: AppConfig;
+  allowedActions?: {
+    create_product: boolean;
+    edit_product: boolean;
+    delete_product: boolean;
+    adjust_stock: boolean;
+    process_sale: boolean;
+  };
 }
 
 interface CartItem {
@@ -31,7 +39,12 @@ interface CartItem {
   quantity: number;
 }
 
-export default function PointOfSaleView({ products, onSellProduct }: PointOfSaleViewProps) {
+export default function PointOfSaleView({ 
+  products, 
+  onSellProduct,
+  config,
+  allowedActions = { create_product: true, edit_product: true, delete_product: true, adjust_stock: true, process_sale: true }
+}: PointOfSaleViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -50,8 +63,10 @@ export default function PointOfSaleView({ products, onSellProduct }: PointOfSale
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Categories matching the food distributor setup
-  const categories = ["Todos", "Abarrotes", "Lácteos y Quesos", "Carnes y Embutidos", "Bebidas y Jugos", "Snacks y Dulces", "Conservas y Enlatados", "Licores", "Tabaco", "Limpieza y Hogar", "Otros"];
+  // Categories matching the custom admin setup
+  const categories = config?.categories && config.categories.length > 0 
+    ? ["Todos", ...config.categories] 
+    : ["Todos", "Abarrotes", "Lácteos y Quesos", "Conservas y Enlatados"];
 
   // Filter products that are available in catalog
   const filteredProducts = useMemo(() => {
@@ -120,15 +135,16 @@ export default function PointOfSaleView({ products, onSellProduct }: PointOfSale
     setErrorMessage(null);
   };
 
-  // Calculated monetary figures itemized by product category taxes:
-  // - 7% standard items (Abarrotes, Lácteos, Carnes, Bebidas, Snacks, Conservas, Limpieza, Otros)
-  // - 10% liquor (Licores)
-  // - 15% tobacco (Tabaco)
+  // Calculated monetary figures itemized by product category taxes dynamically from AppConfig:
   const cartTotals = useMemo(() => {
     let sub = 0;
     let taxGeneral = 0;
     let taxLiquor = 0;
     let taxTobacco = 0;
+
+    const generalRate = config?.taxes?.generalRate !== undefined ? config.taxes.generalRate / 100 : 0.07;
+    const liquorRate = config?.taxes?.liquorRate !== undefined ? config.taxes.liquorRate / 100 : 0.10;
+    const tobaccoRate = config?.taxes?.tobaccoRate !== undefined ? config.taxes.tobaccoRate / 100 : 0.15;
 
     cart.forEach(item => {
       const itemSubtotal = item.product.price * item.quantity;
@@ -136,11 +152,11 @@ export default function PointOfSaleView({ products, onSellProduct }: PointOfSale
       sub += itemSubtotal;
 
       if (cat === 'licores' || cat.includes('licor') || cat.includes('cerveza') || cat.includes('alcohol')) {
-        taxLiquor += itemSubtotal * 0.10;
+        taxLiquor += itemSubtotal * liquorRate;
       } else if (cat === 'tabaco' || cat.includes('tabaco') || cat.includes('cigarro')) {
-        taxTobacco += itemSubtotal * 0.15;
+        taxTobacco += itemSubtotal * tobaccoRate;
       } else {
-        taxGeneral += itemSubtotal * 0.07;
+        taxGeneral += itemSubtotal * generalRate;
       }
     });
 
@@ -155,7 +171,7 @@ export default function PointOfSaleView({ products, onSellProduct }: PointOfSale
       totalTax,
       total
     };
-  }, [cart]);
+  }, [cart, config]);
 
   // Process checkout in real-time
   const handlePerformCheckout = async (e: React.FormEvent) => {
@@ -242,11 +258,15 @@ export default function PointOfSaleView({ products, onSellProduct }: PointOfSale
       `).join('');
 
       // Desglosar impuestos para la Bixolon 80mm
+      const genName = config?.taxes?.generalName || "Imp. Artículos (7%)";
+      const liqName = config?.taxes?.liquorName || "Imp. Licores (10%)";
+      const tobName = config?.taxes?.tobaccoName || "Imp. Tabaco (15%)";
+
       let taxesBlockHtml = '';
       if (salesTicket.taxGeneral > 0) {
         taxesBlockHtml += `
           <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px;">
-            <span>Imp. Artículos (7%):</span>
+            <span>${genName}:</span>
             <span>$ ${salesTicket.taxGeneral.toFixed(2)}</span>
           </div>
         `;
@@ -254,7 +274,7 @@ export default function PointOfSaleView({ products, onSellProduct }: PointOfSale
       if (salesTicket.taxLiquor > 0) {
         taxesBlockHtml += `
           <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px; font-weight: bold;">
-            <span>Imp. Licores (10%):</span>
+            <span>${liqName}:</span>
             <span>$ ${salesTicket.taxLiquor.toFixed(2)}</span>
           </div>
         `;
@@ -262,7 +282,7 @@ export default function PointOfSaleView({ products, onSellProduct }: PointOfSale
       if (salesTicket.taxTobacco > 0) {
         taxesBlockHtml += `
           <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px; font-weight: bold;">
-            <span>Imp. Tabaco (15%):</span>
+            <span>${tobName}:</span>
             <span>$ ${salesTicket.taxTobacco.toFixed(2)}</span>
           </div>
         `;
@@ -368,9 +388,9 @@ export default function PointOfSaleView({ products, onSellProduct }: PointOfSale
           </head>
           <body>
             <div class="header text-center">
-              <div class="company-title">DISTRIBUIDORA DE ALIMENTOS</div>
-              <div class="subtitle">Quito, Ecuador</div>
-              <div class="subtitle">Tel: (02) 299-900 • RUC: 1792348574001</div>
+              <div class="company-title">${config?.companyName || "DISTRIBUIDORA DE ALIMENTOS"}</div>
+              <div class="subtitle">${config?.address || "Quito, Ecuador"}</div>
+              <div class="subtitle">Tel: ${config?.telephone || "(02) 299-900"} • RUC: ${config?.ruc || "1792348574001"}</div>
               <div class="doc-title">COMPROBANTE DE FACTURACIÓN</div>
             </div>
 
@@ -414,8 +434,8 @@ export default function PointOfSaleView({ products, onSellProduct }: PointOfSale
             </div>
 
             <div class="footer text-center">
-              <p>¡Gracias por abastecerse con nosotros!</p>
-              <p style="font-style: italic;">Distribuidora Oficial Almacén</p>
+              <p>${config?.receiptFooter || "¡Gracias por abastecerse con nosotros!"}</p>
+              <p style="font-style: italic;">${config?.receiptAd || "Distribuidora Oficial Almacén"}</p>
               <p style="font-size: 8px; margin-top: 4px; color: #333333;">Impreso en Bixolon SRP-Q300</p>
             </div>
 
@@ -678,20 +698,20 @@ export default function PointOfSaleView({ products, onSellProduct }: PointOfSale
               </div>
               
               {cartTotals.taxGeneral > 0 && (
-                <div className="flex justify-between text-slate-400">
-                  <span>• Impuesto Artículos (7%):</span>
+                <div className="flex justify-between text-slate-440">
+                  <span>• {config?.taxes?.generalName || "Impuesto Artículos (7%)"}:</span>
                   <span>$ {cartTotals.taxGeneral.toFixed(2)}</span>
                 </div>
               )}
               {cartTotals.taxLiquor > 0 && (
                 <div className="flex justify-between text-yellow-400/90">
-                  <span>• Impuesto Licores (10%):</span>
+                  <span>• {config?.taxes?.liquorName || "Impuesto Licores (10%)"}:</span>
                   <span>$ {cartTotals.taxLiquor.toFixed(2)}</span>
                 </div>
               )}
               {cartTotals.taxTobacco > 0 && (
                 <div className="flex justify-between text-rose-400">
-                  <span>• Impuesto Tabaco (15%):</span>
+                  <span>• {config?.taxes?.tobaccoName || "Impuesto Tabaco (15%)"}:</span>
                   <span>$ {cartTotals.taxTobacco.toFixed(2)}</span>
                 </div>
               )}
@@ -712,7 +732,7 @@ export default function PointOfSaleView({ products, onSellProduct }: PointOfSale
             {/* Complete checkout cash register execution */}
             <button
               type="submit"
-              disabled={loading || cart.length === 0}
+              disabled={loading || cart.length === 0 || !allowedActions.process_sale}
               className="w-full bg-teal-500 hover:bg-teal-400 disabled:opacity-40 text-slate-950 font-bold py-3.5 rounded-xl transition shadow-lg shadow-teal-500/10 cursor-pointer text-sm font-sans uppercase flex items-center justify-center gap-2"
             >
               {loading ? (
@@ -720,7 +740,7 @@ export default function PointOfSaleView({ products, onSellProduct }: PointOfSale
               ) : (
                 <>
                   <Receipt className="w-4.5 h-4.5" />
-                  <span>Registrar Venta / Entregar</span>
+                  <span>{allowedActions.process_sale ? "Registrar Venta / Entregar" : "Acceso de Venta Bloqueado"}</span>
                 </>
               )}
             </button>
@@ -753,7 +773,7 @@ export default function PointOfSaleView({ products, onSellProduct }: PointOfSale
                 <div className="w-10 h-10 bg-teal-500/10 text-teal-600 rounded-full flex items-center justify-center mx-auto mb-1 no-print">
                   <Check className="w-5 h-5" />
                 </div>
-                <h4 className="font-sans font-bold text-slate-900 text-sm">DISTRIBUIDORA DE ALIMENTOS</h4>
+                <h4 className="font-sans font-bold text-slate-900 text-sm">{config?.companyName || "DISTRIBUIDORA DE ALIMENTOS"}</h4>
                 <p className="text-[10px] text-slate-500 select-none">Muelle de Carga & Sucursales</p>
                 <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">COMPROBANTE DE FACTURACIÓN</p>
               </div>

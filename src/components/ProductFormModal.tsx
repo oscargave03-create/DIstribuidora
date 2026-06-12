@@ -8,24 +8,28 @@ interface ProductFormModalProps {
   onClose: () => void;
   onSubmit: (data: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => Promise<void>;
   product?: Product | null; // If passed, we are in EDIT mode
+  categoriesList?: string[]; // Dynamic categories list
 }
 
 const CATEGORIES = ["Abarrotes", "Lácteos y Quesos", "Carnes y Embutidos", "Bebidas y Jugos", "Snacks y Dulces", "Conservas y Enlatados", "Licores", "Tabaco", "Limpieza y Hogar", "Otros"];
 
-export default function ProductFormModal({ isOpen, onClose, onSubmit, product }: ProductFormModalProps) {
+export default function ProductFormModal({ isOpen, onClose, onSubmit, product, categoriesList }: ProductFormModalProps) {
+  const cats = categoriesList && categoriesList.length > 0 ? categoriesList : CATEGORIES;
+
   const [name, setName] = useState('');
   const [sku, setSku] = useState('');
   const [description, setDescription] = useState('');
   const [quantity, setQuantity] = useState<number>(0);
   const [minQuantity, setMinQuantity] = useState<number>(2);
   const [price, setPrice] = useState<number>(0);
-  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [category, setCategory] = useState(cats[0]);
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Load product details if in EDIT mode
   useEffect(() => {
+    const defaultCat = categoriesList && categoriesList.length > 0 ? categoriesList[0] : CATEGORIES[0];
     if (product) {
       setName(product.name);
       setSku(product.sku);
@@ -42,10 +46,10 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product }:
       setQuantity(0);
       setMinQuantity(2);
       setPrice(0);
-      setCategory(CATEGORIES[0]);
+      setCategory(defaultCat);
     }
     setError(null);
-  }, [product, isOpen]);
+  }, [product, isOpen, categoriesList]);
 
   // Clean SKU string to follow rules strictly
   const handleSkuChange = (val: string) => {
@@ -190,7 +194,7 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product }:
                     onChange={(e) => setCategory(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-350 focus:outline-none focus:border-teal-500 transition"
                   >
-                    {CATEGORIES.map(cat => (
+                    {cats.map(cat => (
                       <option key={cat} value={cat} className="bg-slate-950 text-white">{cat}</option>
                     ))}
                   </select>

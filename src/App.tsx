@@ -30,10 +30,15 @@ import {
   storeAddProduct,
   storeUpdateProduct,
   storeDeleteProduct,
-  testFirebaseConnection
+  testFirebaseConnection,
+  subscribeConfig,
+  storeUpdateConfig,
+  subscribeUserPermissions,
+  storeUpdateUserPermission,
+  storeDeleteUserPermission
 } from './db/store';
 import { isConfigured } from './firebase';
-import { Product, StockHistory, UserSession } from './types';
+import { Product, StockHistory, UserSession, AppConfig, UserPermission } from './types';
 
 // Page views
 import LoginView from './components/LoginView';
@@ -41,6 +46,7 @@ import DashboardView from './components/DashboardView';
 import PointOfSaleView from './components/PointOfSaleView';
 import AlertsManager from './components/AlertsManager';
 import ReportsView from './components/ReportsView';
+import AdminPanel from './components/AdminPanel';
 
 // Modals
 import ProductFormModal from './components/ProductFormModal';
@@ -54,8 +60,12 @@ export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [history, setHistory] = useState<StockHistory[]>([]);
 
+  // Config and permissions lists
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
+  const [allPermissionsList, setAllPermissionsList] = useState<UserPermission[]>([]);
+
   // Navigation tab selection
-  const [activeTab, setActiveTab ] = useState<'dashboard' | 'pos' | 'alerts' | 'reports'>('dashboard');
+  const [activeTab, setActiveTab ] = useState<'dashboard' | 'pos' | 'alerts' | 'reports' | 'admin'>('dashboard');
 
   // Modular modals open-indicators
   const [showAddModal, setShowAddModal] = useState(false);
@@ -104,10 +114,75 @@ export default function App() {
     };
   }, [user]);
 
+  // Real-time settings and permissions synchronization hook
+  useEffect(() => {
+    if (!user) {
+      setAppConfig(null);
+      setAllPermissionsList([]);
+      return;
+    }
+
+    const unsubConfig = subscribeConfig(user.uid, (config) => {
+      setAppConfig(config);
+    });
+
+    const unsubPerms = subscribeUserPermissions(user.uid, (perms) => {
+      setAllPermissionsList(perms);
+    });
+
+    return () => {
+      unsubConfig();
+      unsubPerms();
+    };
+  }, [user]);
+
   // Aggregate low-stock alerts
   const activeAlertsCount = useMemo(() => {
     return products.filter(p => p.quantity <= p.minQuantity).length;
   }, [products]);
+
+  // Memoized user-level granular authorizations
+  const userPermissions = useMemo<UserPermission | null>(() => {
+    if (!user) return null;
+    return allPermissionsList.find(p => p.id === user.uid) || 
+           allPermissionsList.find(p => p.email.toLowerCase() === user.email.toLowerCase()) || 
+           null;
+  }, [user, allPermissionsList]);
+
+  const activeAllowedTabs = useMemo(() => {
+    return userPermissions?.allowedTabs || {
+      dashboard: true,
+      pos: true,
+      alerts: true,
+      reports: true,
+      admin: false
+    };
+  }, [userPermissions]);
+
+  const activeAllowedActions = useMemo(() => {
+    return userPermissions?.allowedActions || {
+      create_product: true,
+      edit_product: true,
+      delete_product: true,
+      adjust_stock: true,
+      process_sale: true
+    };
+  }, [userPermissions]);
+
+  // Safety tab authorization check
+  useEffect(() => {
+    if (!user) return;
+    const permitted: ('dashboard' | 'pos' | 'alerts' | 'reports' | 'admin')[] = [];
+    if (activeAllowedTabs.dashboard) permitted.push('dashboard');
+    if (activeAllowedTabs.pos) permitted.push('pos');
+    if (activeAllowedTabs.alerts) permitted.push('alerts');
+    if (activeAllowedTabs.reports) permitted.push('reports');
+    if (activeAllowedTabs.admin) permitted.push('admin');
+
+    if (permitted.length > 0 && !permitted.includes(activeTab)) {
+      setActiveTab(permitted[0]);
+    }
+  }, [activeAllowedTabs, activeTab, user]);
 
   const handleLogout = async () => {
     try {
@@ -175,66 +250,90 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-sm font-bold text-white tracking-wide font-display">
-                Catálogo de Inventario
+                {appConfig?.systemTitle || "Catálogo de Inventario"}
               </h1>
-              <span className="text-[10px] text-slate-500 font-mono tracking-wider block">Ctrl. de Stock</span>
+              <span className="text-[10px] text-slate-500 font-mono tracking-wider block">
+                {appConfig?.systemSubtitle || "Ctrl. de Stock"}
+              </span>
             </div>
           </div>
 
           {/* Center Tabs Control */}
           <nav className="flex items-center bg-slate-900 p-1 border border-slate-850 rounded-2xl text-xs font-semibold gap-1">
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl transition cursor-pointer ${
-                activeTab === 'dashboard' 
-                  ? 'bg-slate-950 text-teal-400 font-bold border border-teal-500/10' 
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              <span className="hidden sm:inline">Panel Almacén</span>
-            </button>
+            {activeAllowedTabs.dashboard && (
+              <button
+                onClick={() => setActiveTab('dashboard')}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl transition cursor-pointer ${
+                  activeTab === 'dashboard' 
+                    ? 'bg-slate-950 text-teal-400 font-bold border border-teal-500/10' 
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                <span className="hidden sm:inline">Panel Almacén</span>
+              </button>
+            )}
 
-            <button
-              onClick={() => setActiveTab('pos')}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl transition cursor-pointer ${
-                activeTab === 'pos' 
-                  ? 'bg-slate-950 text-teal-400 font-bold border border-teal-500/10' 
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <ShoppingCart className="w-4 h-4" />
-              <span className="hidden sm:inline">Caja / POS</span>
-            </button>
+            {activeAllowedTabs.pos && (
+              <button
+                onClick={() => setActiveTab('pos')}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl transition cursor-pointer ${
+                  activeTab === 'pos' 
+                    ? 'bg-slate-950 text-teal-400 font-bold border border-teal-500/10' 
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <ShoppingCart className="w-4 h-4" />
+                <span className="hidden sm:inline">Caja / POS</span>
+              </button>
+            )}
             
-            <button
-              onClick={() => setActiveTab('alerts')}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl transition cursor-pointer relative ${
-                activeTab === 'alerts' 
-                  ? 'bg-slate-950 text-amber-400 font-bold border border-amber-500/10' 
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <AlertTriangle className="w-4 h-4" />
-              <span className="hidden sm:inline">Alertas de Stock</span>
-              {activeAlertsCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse shadow-sm">
-                  {activeAlertsCount}
-                </span>
-              )}
-            </button>
+            {activeAllowedTabs.alerts && (
+              <button
+                onClick={() => setActiveTab('alerts')}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl transition cursor-pointer relative ${
+                  activeTab === 'alerts' 
+                    ? 'bg-slate-950 text-amber-400 font-bold border border-amber-500/10' 
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <AlertTriangle className="w-4 h-4" />
+                <span className="hidden sm:inline">Alertas de Stock</span>
+                {activeAlertsCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse shadow-sm">
+                    {activeAlertsCount}
+                  </span>
+                )}
+              </button>
+            )}
             
-            <button
-              onClick={() => setActiveTab('reports')}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl transition cursor-pointer ${
-                activeTab === 'reports' 
-                  ? 'bg-slate-950 text-indigo-400 font-bold border border-indigo-500/10' 
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <FileText className="w-4 h-4" />
-              <span className="hidden sm:inline">Reportes / Kárdex</span>
-            </button>
+            {activeAllowedTabs.reports && (
+              <button
+                onClick={() => setActiveTab('reports')}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl transition cursor-pointer ${
+                  activeTab === 'reports' 
+                    ? 'bg-slate-950 text-indigo-400 font-bold border border-indigo-500/10' 
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <FileText className="w-4 h-4" />
+                <span className="hidden sm:inline">Reportes / Kárdex</span>
+              </button>
+            )}
+
+            {activeAllowedTabs.admin && (
+              <button
+                onClick={() => setActiveTab('admin')}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl transition cursor-pointer ${
+                  activeTab === 'admin' 
+                    ? 'bg-slate-950 text-emerald-400 font-bold border border-emerald-500/10' 
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span className="hidden sm:inline">Admin</span>
+              </button>
+            )}
           </nav>
 
           {/* Right User account settings block */}
@@ -278,6 +377,8 @@ export default function App() {
                 onDeleteProduct={(p) => setDeletingProduct(p)}
                 onQuickAdjust={(p) => setAdjustingProduct(p)}
                 activeAlertsCount={activeAlertsCount}
+                categoriesList={appConfig?.categories || []}
+                allowedActions={activeAllowedActions}
               />
             )}
 
@@ -287,6 +388,8 @@ export default function App() {
                 onSellProduct={async (prodId, newQty, reason) => {
                   await handleQuickAdjustConfirm(prodId, { quantity: newQty }, reason);
                 }}
+                config={appConfig || undefined}
+                allowedActions={activeAllowedActions}
               />
             )}
 
@@ -301,6 +404,23 @@ export default function App() {
               <ReportsView 
                 products={products}
                 history={history}
+              />
+            )}
+
+            {activeTab === 'admin' && appConfig && (
+              <AdminPanel 
+                config={appConfig}
+                onUpdateConfig={async (newConfig) => {
+                  await storeUpdateConfig(user.uid, newConfig);
+                }}
+                permissions={allPermissionsList}
+                onUpdatePermission={async (p) => {
+                  await storeUpdateUserPermission(p);
+                }}
+                onDeletePermission={async (id) => {
+                  await storeDeleteUserPermission(id);
+                }}
+                currentUserUid={user.uid}
               />
             )}
           </motion.div>
@@ -344,6 +464,7 @@ export default function App() {
         onClose={() => setShowAddModal(false)}
         onSubmit={handleAddProductSubmit}
         product={null}
+        categoriesList={appConfig?.categories || []}
       />
 
       {/* 2. Edit Product modal */}
@@ -352,6 +473,7 @@ export default function App() {
         onClose={() => setEditingProduct(null)}
         onSubmit={handleEditProductSubmit}
         product={editingProduct}
+        categoriesList={appConfig?.categories || []}
       />
 
       {/* 3. Stock Adjustment replenishment dialog */}

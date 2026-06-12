@@ -33,3 +33,46 @@ export interface UserSession {
   isFirebase: boolean;
   emailVerified?: boolean;
 }
+
+export interface UserPermission {
+  id: string; // matches UserSession.uid
+  email: string;
+  displayName: string;
+  role: 'admin' | 'supervisor' | 'cashier' | 'guest';
+  password?: string; // Optional custom user password
+  allowedTabs: {
+    dashboard: boolean;
+    pos: boolean;
+    alerts: boolean;
+    reports: boolean;
+    admin: boolean;
+  };
+  allowedActions: {
+    create_product: boolean;
+    edit_product: boolean;
+    delete_product: boolean;
+    adjust_stock: boolean;
+    process_sale: boolean;
+  };
+}
+
+export interface AppConfig {
+  systemTitle: string;
+  systemSubtitle: string;
+  companyName: string;
+  ruc: string;
+  telephone: string;
+  address: string;
+  receiptFooter: string;
+  receiptAd: string;
+  categories: string[];
+  taxes: {
+    generalRate: number;
+    liquorRate: number;
+    tobaccoRate: number;
+    generalName: string;
+    liquorName: string;
+    tobaccoName: string;
+  };
+}
+
