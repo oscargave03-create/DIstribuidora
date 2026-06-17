@@ -156,6 +156,15 @@ export default function App() {
   }, [user, allPermissionsList]);
 
   const activeAllowedTabs = useMemo(() => {
+    if (isSuperAdmin) {
+      return {
+        dashboard: true,
+        pos: true,
+        alerts: true,
+        reports: true,
+        admin: true
+      };
+    }
     return userPermissions?.allowedTabs || {
       dashboard: true,
       pos: true,
@@ -163,9 +172,18 @@ export default function App() {
       reports: true,
       admin: false
     };
-  }, [userPermissions]);
+  }, [userPermissions, isSuperAdmin]);
 
   const activeAllowedActions = useMemo(() => {
+    if (isSuperAdmin) {
+      return {
+        create_product: true,
+        edit_product: true,
+        delete_product: true,
+        adjust_stock: true,
+        process_sale: true
+      };
+    }
     return userPermissions?.allowedActions || {
       create_product: true,
       edit_product: true,
@@ -173,7 +191,7 @@ export default function App() {
       adjust_stock: true,
       process_sale: true
     };
-  }, [userPermissions]);
+  }, [userPermissions, isSuperAdmin]);
 
   // Safety tab authorization check
   useEffect(() => {

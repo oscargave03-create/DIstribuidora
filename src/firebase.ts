@@ -1,28 +1,13 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import firebaseConfig from '../firebase-applet-config.json';
+// Firebase integration is removed per user request to transition to Supabase.
+// This mock file ensures existing imports don't break during compilation.
+// We proxy isConfigured to check if Supabase is set up.
 
-const isConfigured = !!(
-  firebaseConfig && 
-  firebaseConfig.apiKey && 
-  firebaseConfig.apiKey !== "" && 
-  firebaseConfig.projectId && 
-  firebaseConfig.projectId !== ""
+export const app = null as any;
+export const db = null as any;
+export const auth = null as any;
+
+export const isConfigured = !!(
+  (import.meta as any).env?.VITE_SUPABASE_URL && 
+  (import.meta as any).env?.VITE_SUPABASE_ANON_KEY &&
+  !(import.meta as any).env?.VITE_SUPABASE_URL.includes("placeholder")
 );
-
-let app: any = null;
-let db: any = null;
-let auth: any = null;
-
-if (isConfigured) {
-  try {
-    app = initializeApp(firebaseConfig);
-    db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
-    auth = getAuth(app);
-  } catch (error) {
-    console.error("Failed to initialize Firebase SDK:", error);
-  }
-}
-
-export { app, db, auth, isConfigured };

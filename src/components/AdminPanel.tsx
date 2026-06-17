@@ -855,7 +855,7 @@ export default function AdminPanel({
                           if (actionName === 'create_product') return 'Crear';
                           if (actionName === 'edit_product') return 'Editar';
                           if (actionName === 'delete_product') return 'Bajar';
-                          if (actionName === 'adjust_stock: true') return 'Ajustar';
+                          if (actionName === 'adjust_stock') return 'Ajustar';
                           if (actionName === 'process_sale') return 'Vender';
                           return actionName;
                         });
