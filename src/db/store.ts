@@ -315,21 +315,54 @@ export const subscribeProducts = (
       
       if (error) throw error;
 
-      if (active) {
-        const mapped: Product[] = (data || []).map(row => ({
-          id: row.id,
-          name: row.name,
-          sku: row.sku,
-          description: row.description || '',
-          quantity: row.quantity,
-          minQuantity: row.min_quantity,
-          price: Number(row.price),
-          category: row.category,
-          createdAt: row.created_at,
-          updatedAt: row.updated_at,
-          userId: row.user_id
-        }));
-        onData(mapped);
+      if (data && data.length > 0) {
+        if (active) {
+          const mapped: Product[] = data.map(row => ({
+            id: row.id,
+            name: row.name,
+            sku: row.sku,
+            description: row.description || '',
+            quantity: row.quantity,
+            minQuantity: row.min_quantity,
+            price: Number(row.price),
+            category: row.category,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at,
+            userId: row.user_id
+          }));
+          onData(mapped);
+          // Keep local fallback synced
+          saveLocalProducts(userId, mapped);
+        }
+      } else {
+        // Supabase product table is empty, seed it with the existing local data if present
+        const local = getLocalProducts(userId);
+        if (local && local.length > 0) {
+          const rows = local.map(p => ({
+            id: p.id,
+            name: p.name,
+            sku: p.sku,
+            description: p.description || '',
+            quantity: p.quantity,
+            min_quantity: p.minQuantity ?? 10,
+            price: p.price,
+            category: p.category,
+            created_at: p.createdAt,
+            updated_at: p.updatedAt,
+            user_id: p.userId
+          }));
+          
+          supabase.from('products').upsert(rows).then(({ error: upsertErr }) => {
+            if (!upsertErr) {
+              fetchAndEmit();
+            } else {
+              console.error("Failed to migrate products, falling back to local:", upsertErr);
+              if (active) onData(local);
+            }
+          });
+        } else {
+          if (active) onData([]);
+        }
       }
     } catch (err) {
       console.warn("Using offline fallback. Please run SQL schema in Supabase Editor to create 'products' table.", err);
@@ -376,21 +409,54 @@ export const subscribeHistory = (
       
       if (error) throw error;
 
-      if (active) {
-        const mapped: StockHistory[] = (data || []).map(row => ({
-          id: row.id,
-          productId: row.product_id,
-          productName: row.product_name,
-          userId: row.user_id,
-          userName: row.user_name,
-          type: row.type as any,
-          changeAmount: row.change_amount,
-          previousQuantity: row.previous_quantity,
-          newQuantity: row.new_quantity,
-          notes: row.notes || '',
-          timestamp: row.timestamp
-        }));
-        onData(mapped);
+      if (data && data.length > 0) {
+        if (active) {
+          const mapped: StockHistory[] = data.map(row => ({
+            id: row.id,
+            productId: row.product_id,
+            productName: row.product_name,
+            userId: row.user_id,
+            userName: row.user_name,
+            type: row.type as any,
+            changeAmount: row.change_amount,
+            previousQuantity: row.previous_quantity,
+            newQuantity: row.new_quantity,
+            notes: row.notes || '',
+            timestamp: row.timestamp
+          }));
+          onData(mapped);
+          // Keep local fallback synced
+          saveLocalHistory(userId, mapped);
+        }
+      } else {
+        // Supabase history is empty, seed it with the existing local history if present
+        const local = getLocalHistory(userId);
+        if (local && local.length > 0) {
+          const rows = local.map(h => ({
+            id: h.id,
+            product_id: h.productId,
+            product_name: h.productName,
+            user_id: h.userId,
+            user_name: h.userName,
+            type: h.type,
+            change_amount: h.changeAmount,
+            previous_quantity: h.previousQuantity,
+            new_quantity: h.newQuantity,
+            notes: h.notes || '',
+            timestamp: h.timestamp
+          }));
+
+          supabase.from('stock_history').upsert(rows).then(({ error: upsertErr }) => {
+            if (!upsertErr) {
+              fetchAndEmit();
+            } else {
+              console.error("Failed to migrate history, falling back to local:", upsertErr);
+              if (active) onData(local);
+            }
+          });
+        } else {
+          if (active) onData([]);
+        }
       }
     } catch (err) {
       console.warn("Using offline fallback (history). Run SQL Schema in Supabase to create 'stock_history' table.", err);
@@ -775,14 +841,17 @@ export const subscribeConfig = (
       if (data && data.config) {
         if (active) {
           onData(data.config as AppConfig);
+          // Keep local fallback synced
+          localStorage.setItem(`app_config_${userId}`, JSON.stringify(data.config));
         }
       } else {
-        // Safe placeholder config insert on empty db
+        // Safe placeholder config insert on empty db using the custom local configuration
+        const local = getLocalConfig();
         await supabase
           .from('app_config')
-          .insert({ user_id: 'general-config', config: DEFAULT_CONFIG });
+          .insert({ user_id: 'general-config', config: local });
         if (active) {
-          onData(DEFAULT_CONFIG);
+          onData(local);
         }
       }
     } catch (err) {
@@ -860,17 +929,68 @@ export const subscribeUserPermissions = (
       
       if (error) throw error;
 
-      if (active) {
-        const mapped: UserPermission[] = (data || []).map(row => ({
+      if (data && data.length > 0) {
+        if (active) {
+          const mapped: UserPermission[] = data.map(row => ({
+            id: row.id,
+            email: row.email,
+            displayName: row.display_name,
+            role: row.role as any,
+            password: row.password || '',
+            allowedTabs: row.allowed_tabs,
+            allowedActions: row.allowed_actions
+          }));
+          onData(mapped);
+          // Sync with LocalStorage for consistent offline capability
+          localStorage.setItem(`app_permissions_list`, JSON.stringify(mapped));
+        }
+      } else {
+        // Supabase user_permissions table is empty. Let's seed it with the current local list
+        const local = getLocalPermissions();
+        const hasCurrentUser = local.some(p => p.id === userId);
+        if (!hasCurrentUser) {
+          const newUserPerm: UserPermission = {
+            id: userId,
+            email: userId === "oscar-guevara-uid" ? "oscargave03@gmail.com" : "demo@inventario-app.com",
+            displayName: userId === "oscar-guevara-uid" ? "Oscar Guevara (Super Admin)" : "Usuario Administrador",
+            role: "admin",
+            allowedTabs: {
+              dashboard: true,
+              pos: true,
+              alerts: true,
+              reports: true,
+              admin: true
+            },
+            allowedActions: {
+              create_product: true,
+              edit_product: true,
+              delete_product: true,
+              adjust_stock: true,
+              process_sale: true
+            }
+          };
+          local.push(newUserPerm);
+          localStorage.setItem(`app_permissions_list`, JSON.stringify(local));
+        }
+
+        const rows = local.map(row => ({
           id: row.id,
           email: row.email,
-          displayName: row.display_name,
-          role: row.role as any,
+          display_name: row.displayName,
+          role: row.role,
           password: row.password || '',
-          allowedTabs: row.allowed_tabs,
-          allowedActions: row.allowed_actions
+          allowed_tabs: row.allowedTabs,
+          allowed_actions: row.allowedActions
         }));
-        onData(mapped);
+
+        supabase.from('user_permissions').upsert(rows).then(({ error: upsertErr }) => {
+          if (!upsertErr) {
+            fetchAndEmit();
+          } else {
+            console.error("Failed to migrate permissions to Supabase:", upsertErr);
+            if (active) onData(local);
+          }
+        });
       }
     } catch (err) {
       console.warn("Using offline fallback (permissions). Run SQL Schema in Supabase to create 'user_permissions' table.", err);
