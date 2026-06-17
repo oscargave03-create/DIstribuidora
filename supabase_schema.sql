@@ -1,5 +1,5 @@
 -- ====================================================================
--- SCRIPT DE BASE DE DATOS PARA SUPABASE
+-- SCRIPT DE BASE DE DATOS PARA SUPABASE (PERMISOS COMPLETOS DE ESCRITURA)
 -- Copia y pega este script completo en el SQL Editor de tu consola de Supabase.
 -- ====================================================================
 
@@ -36,7 +36,6 @@ CREATE TABLE IF NOT EXISTS products (
 );
 
 -- 4. Tabla de Historial de Movimientos de Stock (Kárdex)
--- Nota: 'product_id' se guarda como TEXT plano para evitar violaciones de clave foránea si se borra un producto.
 CREATE TABLE IF NOT EXISTS stock_history (
     id TEXT PRIMARY KEY,
     product_id TEXT NOT NULL,
@@ -52,32 +51,15 @@ CREATE TABLE IF NOT EXISTS stock_history (
 );
 
 -- ====================================================================
--- CONFIGURACIÓN DE POLÍTICAS DE ACCESO (RLS - ROW LEVEL SECURITY)
--- Habilita RLS pero define políticas permitiendo lectura y escritura completa
--- para agilizar la integración en tu demo.
+-- CONTROL DE ACCESO TOTAL (DESHABILITAR RLS PARA GARANTIZAR ESCRITURA DIRECTA)
+-- Al deshabilitar RLS, la clave pública (anon key) tiene permisos completos
+-- de lectura y escritura para agilizar la integración en tu demo.
 -- ====================================================================
 
--- Habilitar RLS en todas las tablas
-ALTER TABLE app_config ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_permissions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE products ENABLE ROW LEVEL SECURITY;
-ALTER TABLE stock_history ENABLE ROW LEVEL SECURITY;
-
--- Políticas para app_config (Acceso Libre)
-DROP POLICY IF EXISTS "Acceso total app_config" ON app_config;
-CREATE POLICY "Acceso total app_config" ON app_config FOR ALL USING (true) WITH CHECK (true);
-
--- Políticas para user_permissions (Acceso Libre)
-DROP POLICY IF EXISTS "Acceso total user_permissions" ON user_permissions;
-CREATE POLICY "Acceso total user_permissions" ON user_permissions FOR ALL USING (true) WITH CHECK (true);
-
--- Políticas para products (Acceso Libre)
-DROP POLICY IF EXISTS "Acceso total products" ON products;
-CREATE POLICY "Acceso total products" ON products FOR ALL USING (true) WITH CHECK (true);
-
--- Políticas para stock_history (Acceso Libre)
-DROP POLICY IF EXISTS "Acceso total stock_history" ON stock_history;
-CREATE POLICY "Acceso total stock_history" ON stock_history FOR ALL USING (true) WITH CHECK (true);
+ALTER TABLE app_config DISABLE ROW LEVEL SECURITY;
+ALTER TABLE user_permissions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE products DISABLE ROW LEVEL SECURITY;
+ALTER TABLE stock_history DISABLE ROW LEVEL SECURITY;
 
 -- ====================================================================
 -- INSERCIÓN DE DATOS POR DEFECTO PARA EL INICIO DE SESIÓN
