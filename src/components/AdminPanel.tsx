@@ -23,6 +23,7 @@ import {
   Unlock
 } from 'lucide-react';
 import { AppConfig, UserPermission } from '../types';
+import { isSupabaseConfigured } from '../supabaseClient';
 
 interface AdminPanelProps {
   config: AppConfig;
@@ -286,6 +287,37 @@ export default function AdminPanel({
           transition={{ duration: 0.15 }}
           className="bg-slate-900 border border-slate-850 rounded-3xl p-6 md:p-8"
         >
+          
+          {/* Supabase Status Alert Card */}
+          {!isSupabaseConfigured && (
+            <div className="mb-8 p-5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 space-y-3">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5 text-amber-400" />
+                <h4 className="text-sm font-bold text-white">
+                  ⚠️ Atención: Trabajando en Modo Local (LocalStorage)
+                </h4>
+              </div>
+              <p className="text-xs text-slate-350 leading-relaxed">
+                Detectamos que estás utilizando la aplicación desde tu despliegue de Vercel (o entorno externo), pero <strong>no se han configurado las variables de entorno de Supabase en tu panel de hosting</strong>. Los datos creados o actualizados aquí no se subirán a tu base de datos central de Supabase.
+              </p>
+              <div className="text-xs bg-slate-950/80 p-4 rounded-xl space-y-2 border border-slate-900 font-sans">
+                <p className="font-semibold text-white">¿Cómo solucionar esto y conectar tu base de datos en Vercel?</p>
+                <ol className="list-decimal list-inside space-y-1 text-slate-400">
+                  <li>Ve a tu consola o panel de control de <strong className="text-white font-medium">Vercel</strong>.</li>
+                  <li>Entra a tu proyecto <strong className="text-white font-medium">d-istribuidora-a2l9xgwj7-oscar-vega-s-projects</strong>.</li>
+                  <li>Ve a la pestaña de configuración: <strong className="text-white font-medium">Settings</strong> &rarr; <strong className="text-white font-medium">Environment Variables</strong>.</li>
+                  <li>Agrega las siguientes dos variables copiando los valores de tu archivo local o consola de configuración:</li>
+                </ol>
+                <div className="mt-3 p-3 bg-slate-900 rounded border border-slate-800 font-mono text-[11.5px] text-teal-400 space-y-1.5 overflow-x-auto select-all">
+                  <div>VITE_SUPABASE_URL = <span className="text-slate-450">[Tu URL de Supabase]</span></div>
+                  <div>VITE_SUPABASE_ANON_KEY = <span className="text-slate-450">[Tu Clave Anon de Supabase]</span></div>
+                </div>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  * Una vez agregadas ambas variables, realiza un nuevo redespliegue (rebuild / redeploy) en Vercel para cargarlas en producción.
+                </p>
+              </div>
+            </div>
+          )}
           
           {/* ==================== SUB-TAB 1: SYSTEM & TEXTS CONFIG ==================== */}
           {subTab === 'system' && (

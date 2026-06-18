@@ -40,6 +40,7 @@ import {
   storeDeleteUserPermission
 } from './db/store';
 import { isConfigured } from './firebase';
+import { isSupabaseConfigured } from './supabaseClient';
 import { Product, StockHistory, UserSession, AppConfig, UserPermission } from './types';
 
 // Page views
@@ -456,6 +457,18 @@ export default function App() {
                 )}
               </button>
             )}
+
+            {/* Database connection badge */}
+            <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-mono border select-none ${
+              isSupabaseConfigured 
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                : 'bg-amber-500/10 text-amber-400 border-amber-500/20 animate-pulse'
+            }`}
+            title={isSupabaseConfigured ? "Conectado a la base de datos central de Supabase" : "La base de datos Supabase no está configurada en las variables de entorno de Vercel. Los datos actuales solo se guardan localmente en su navegador."}
+            >
+              <Database className={`w-3.5 h-3.5 ${isSupabaseConfigured ? 'text-emerald-400' : 'text-amber-400'}`} />
+              <span>{isSupabaseConfigured ? "En línea (Supabase)" : "Offline (Local)"}</span>
+            </div>
 
             <div className="hidden md:flex items-center gap-2.5 bg-slate-900 border border-slate-850 px-3.5 py-1.5 rounded-2xl">
               <div className="w-7 h-7 bg-teal-500/10 rounded-full flex items-center justify-center text-teal-400">
