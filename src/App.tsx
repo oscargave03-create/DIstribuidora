@@ -430,7 +430,7 @@ export default function App() {
       {/* Mobile Drawer Navigation (Slide-out from left) */}
       <AnimatePresence>
         {isMobileMenuOpen && (
-          <div className="fixed inset-0 z-50 flex md:hidden">
+          <div className="fixed inset-0 z-50 flex lg:hidden">
             {/* Backdrop Overlay */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -581,7 +581,7 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="flex md:hidden items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-mono border select-none bg-slate-950/40 text-slate-400 border-slate-850">
+                <div className="flex lg:hidden items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-mono border select-none bg-slate-950/40 text-slate-400 border-slate-850">
                   <Database className="w-3.5 h-3.5" />
                   <span>{isSupabaseConfigured ? "Supabase Online" : "Local Storage"}</span>
                 </div>
@@ -603,15 +603,15 @@ export default function App() {
       </AnimatePresence>
 
       {/* Upper Navigation Header Bar */}
-      <header className="sticky top-0 z-40 bg-slate-950/85 backdrop-blur-md border-b border-slate-900/80 z-10">
+      <header className="sticky top-0 z-40 bg-slate-950/85 backdrop-blur-md border-b border-slate-900/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
           
           {/* Logo brand */}
           <div className="flex items-center gap-3">
-            {/* Hamburger menu trigger for mobile viewports */}
+            {/* Hamburger menu trigger for mobile/tablet viewports */}
             <button
               onClick={() => setIsMobileMenuOpen(true)}
-              className="flex md:hidden items-center justify-center p-2 rounded-xl bg-slate-900 border border-slate-850 hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer"
+              className="flex lg:hidden items-center justify-center p-2 rounded-xl bg-slate-900 border border-slate-850 hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer"
               title="Abrir menú de navegación"
             >
               <Menu className="w-5 h-5" />
@@ -633,8 +633,8 @@ export default function App() {
             </div>
           </div>
 
-          {/* Center Tabs Control - Hidden on mobile, shown on md+ screens */}
-          <nav className="hidden md:flex items-center bg-slate-900/90 p-1 border border-slate-850/80 rounded-2xl text-xs font-semibold gap-1 z-10 shadow-lg">
+          {/* Center Tabs Control - Hidden on mobile/tablets, shown on lg+ screens */}
+          <nav className="hidden lg:flex items-center bg-slate-900/90 p-1 border border-slate-850/80 rounded-2xl text-xs font-semibold gap-1 z-10 shadow-lg">
             {activeAllowedTabs.dashboard && (
               <button
                 onClick={() => setActiveTab('dashboard')}
@@ -756,7 +756,7 @@ export default function App() {
               <span>{isSupabaseConfigured ? "En línea (Supabase)" : "Offline (Local)"}</span>
             </div>
 
-            <div className="hidden md:flex items-center gap-2.5 bg-slate-900 border border-slate-850 px-3.5 py-1.5 rounded-2xl">
+            <div className="hidden lg:flex items-center gap-2.5 bg-slate-900 border border-slate-850 px-3.5 py-1.5 rounded-2xl">
               <div className="w-7 h-7 bg-brand-muted rounded-full flex items-center justify-center text-brand">
                 <User className="w-4 h-4" />
               </div>

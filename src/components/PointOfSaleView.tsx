@@ -39,6 +39,42 @@ interface CartItem {
   quantity: number;
 }
 
+// Helper to check if a product (via its category or name) represents food or meal and is therefore tax-free
+function isFoodOrProductExempt(category: string, name: string): boolean {
+  const cat = (category || '').toLowerCase();
+  const nm = (name || '').toLowerCase();
+  
+  // List of keywords for categories or item names related to food/comida (excluding alcoholic beverages)
+  const foodKeywords = [
+    'abarrote', 'lacteo', 'lácteo', 'queso', 'conserva', 'enlatado', 
+    'alimento', 'comida', 'panader', 'panific', 'pan', 'carne', 
+    'embutido', 'fruta', 'verdura', 'vegetal', 'marisco', 'pescado', 
+    'dulce', 'confiter', 'reposter', 'snack', 'galleta', 'comestible', 
+    'viveres', 'víveres', 'leche', 'arroz', 'aceite', 'atun', 'atún',
+    'fideo', 'pasta', 'harina', 'sal', 'azucar', 'azúcar', 'cafe', 'café',
+    'te', 'té', 'agua', 'jugo', 'refresco', 'soda'
+  ];
+
+  // Exclude alcoholic beverages or tobacco from exemption
+  const isAlcoholOrTobacco = 
+    cat.includes('licor') || cat.includes('cerveza') || cat.includes('alcohol') || cat.includes('tabaco') || cat.includes('cigarro') ||
+    nm.includes('licor') || nm.includes('cerveza') || nm.includes('tabaco') || nm.includes('cigarro');
+
+  if (isAlcoholOrTobacco) {
+    return false;
+  }
+
+  // Double check Spanish accents by normalising
+  const normalize = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const normalizedCat = normalize(cat);
+  const normalizedNm = normalize(nm);
+
+  return foodKeywords.some(keyword => {
+    const normalizedKeyword = normalize(keyword);
+    return normalizedCat.includes(normalizedKeyword) || normalizedNm.includes(normalizedKeyword);
+  });
+}
+
 export default function PointOfSaleView({ 
   products, 
   onSellProduct,
@@ -155,6 +191,8 @@ export default function PointOfSaleView({
         taxLiquor += itemSubtotal * liquorRate;
       } else if (cat === 'tabaco' || cat.includes('tabaco') || cat.includes('cigarro')) {
         taxTobacco += itemSubtotal * tobaccoRate;
+      } else if (isFoodOrProductExempt(item.product.category, item.product.name)) {
+        // Alimentos y comida están exentos de impuestos de forma amigable (tasa 0%)
       } else {
         taxGeneral += itemSubtotal * generalRate;
       }
