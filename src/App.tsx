@@ -21,7 +21,8 @@ import {
   Trash2,
   ShoppingCart,
   Lock,
-  Unlock
+  Unlock,
+  Menu
 } from 'lucide-react';
 
 import { 
@@ -69,6 +70,7 @@ export default function App() {
 
   // Navigation tab selection
   const [activeTab, setActiveTab ] = useState<'dashboard' | 'pos' | 'alerts' | 'reports' | 'admin'>('dashboard');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Modular modals open-indicators
   const [showAddModal, setShowAddModal] = useState(false);
@@ -425,12 +427,196 @@ export default function App() {
       <div className="absolute top-[-10%] right-[10%] w-[500px] h-[500px] rounded-full bg-brand/5 blur-[150px] pointer-events-none z-0" />
       <div className="absolute bottom-[20%] left-[-10%] w-[500px] h-[350px] rounded-full bg-brand/5 blur-[130px] pointer-events-none z-0" />
 
+      {/* Mobile Drawer Navigation (Slide-out from left) */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <div className="fixed inset-0 z-50 flex md:hidden">
+            {/* Backdrop Overlay */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+              style={{ contentVisibility: 'auto' }}
+            />
+
+            {/* Sidebar drawer panel */}
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+              className="relative w-80 max-w-[85vw] h-full bg-slate-900 border-r border-slate-850/95 p-6 flex flex-col shadow-2xl z-10 overflow-y-auto"
+            >
+              {/* Header inside drawer */}
+              <div className="flex items-center justify-between border-b border-slate-850 pb-5 mb-6">
+                <div className="flex items-center gap-2.5">
+                  <div className="relative w-8 h-8 bg-gradient-to-tr from-brand to-brand-hover rounded-lg flex items-center justify-center shadow-md shadow-brand/10">
+                    <Package className="w-4.5 h-4.5 text-slate-950 stroke-[2.2px]" />
+                  </div>
+                  <div>
+                    <h2 className="text-xs font-black text-white tracking-wide uppercase font-display">
+                      {appConfig?.systemTitle || "Inventario"}
+                    </h2>
+                    <span className="text-[9px] text-slate-500 font-mono block">
+                      Menú de Navegación
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-1.5 rounded-lg border border-slate-800 hover:border-slate-700 bg-slate-950/40 text-slate-400 hover:text-white transition cursor-pointer"
+                  title="Cerrar menú"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Navigation list in drawer */}
+              <div className="flex flex-col gap-2 flex-1">
+                <span className="text-[10px] font-bold text-slate-500 tracking-wider uppercase mb-1">Módulos del Sistema</span>
+                
+                {activeAllowedTabs.dashboard && (
+                  <button
+                    onClick={() => {
+                      setActiveTab('dashboard');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all cursor-pointer text-sm font-bold text-left ${
+                      activeTab === 'dashboard'
+                        ? 'bg-brand/10 text-brand border border-brand/20'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-850/50'
+                    }`}
+                  >
+                    <LayoutDashboard className="w-4.5 h-4.5 shrink-0" />
+                    <span>Panel Almacén</span>
+                  </button>
+                )}
+
+                {activeAllowedTabs.pos && (
+                  <button
+                    onClick={() => {
+                      setActiveTab('pos');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all cursor-pointer text-sm font-bold text-left ${
+                      activeTab === 'pos'
+                        ? 'bg-brand/10 text-brand border border-brand/20'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-850/50'
+                    }`}
+                  >
+                    <ShoppingCart className="w-4.5 h-4.5 shrink-0" />
+                    <span>Caja / POS</span>
+                  </button>
+                )}
+
+                {activeAllowedTabs.alerts && (
+                  <button
+                    onClick={() => {
+                      setActiveTab('alerts');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all cursor-pointer text-sm font-bold text-left relative ${
+                      activeTab === 'alerts'
+                        ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-850/50'
+                    }`}
+                  >
+                    <AlertTriangle className="w-4.5 h-4.5 shrink-0" />
+                    <span>Alertas de Stock</span>
+                    {activeAlertsCount > 0 && (
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse shadow-sm">
+                        {activeAlertsCount}
+                      </span>
+                    )}
+                  </button>
+                )}
+
+                {activeAllowedTabs.reports && (
+                  <button
+                    onClick={() => {
+                      setActiveTab('reports');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all cursor-pointer text-sm font-bold text-left ${
+                      activeTab === 'reports'
+                        ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-850/50'
+                    }`}
+                  >
+                    <FileText className="w-4.5 h-4.5 shrink-0" />
+                    <span>Reportes / Kárdex</span>
+                  </button>
+                )}
+
+                {activeAllowedTabs.admin && (
+                  <button
+                    onClick={() => {
+                      setActiveTab('admin');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all cursor-pointer text-sm font-bold text-left ${
+                      activeTab === 'admin'
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-850/50'
+                    }`}
+                  >
+                    <ShieldCheck className="w-4.5 h-4.5 shrink-0" />
+                    <span>Admin</span>
+                  </button>
+                )}
+              </div>
+
+              {/* User info at bottom */}
+              <div className="border-t border-slate-850 pt-5 mt-auto space-y-4">
+                <div className="flex items-center gap-3 px-1">
+                  <div className="w-8 h-8 bg-brand-muted rounded-full flex items-center justify-center text-brand shrink-0">
+                    <User className="w-4.5 h-4.5" />
+                  </div>
+                  <div className="text-left overflow-hidden">
+                    <span className="text-xs font-bold text-white block leading-tight truncate">{user.displayName}</span>
+                    <span className="text-[9px] font-mono text-slate-500 block leading-none truncate">{user.email}</span>
+                  </div>
+                </div>
+
+                <div className="flex md:hidden items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-mono border select-none bg-slate-950/40 text-slate-400 border-slate-850">
+                  <Database className="w-3.5 h-3.5" />
+                  <span>{isSupabaseConfigured ? "Supabase Online" : "Local Storage"}</span>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="w-full h-11 flex items-center justify-center gap-2 px-5 py-3 bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition cursor-pointer border border-slate-700"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Cerrar Sesión</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Upper Navigation Header Bar */}
       <header className="sticky top-0 z-40 bg-slate-950/85 backdrop-blur-md border-b border-slate-900/80 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
           
           {/* Logo brand */}
           <div className="flex items-center gap-3">
+            {/* Hamburger menu trigger for mobile viewports */}
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="flex md:hidden items-center justify-center p-2 rounded-xl bg-slate-900 border border-slate-850 hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer"
+              title="Abrir menú de navegación"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
             <div className="relative group">
               <div className="absolute -inset-1 rounded-xl bg-gradient-to-r from-brand to-brand-hover opacity-30 blur-[6px] group-hover:opacity-75 transition duration-500" />
               <div className="relative w-9 h-9 bg-gradient-to-tr from-brand to-brand-hover rounded-xl flex items-center justify-center shadow-md shadow-brand/10">
@@ -447,8 +633,8 @@ export default function App() {
             </div>
           </div>
 
-          {/* Center Tabs Control */}
-          <nav className="flex items-center bg-slate-900/90 p-1 border border-slate-850/80 rounded-2xl text-xs font-semibold gap-1 z-10 shadow-lg">
+          {/* Center Tabs Control - Hidden on mobile, shown on md+ screens */}
+          <nav className="hidden md:flex items-center bg-slate-900/90 p-1 border border-slate-850/80 rounded-2xl text-xs font-semibold gap-1 z-10 shadow-lg">
             {activeAllowedTabs.dashboard && (
               <button
                 onClick={() => setActiveTab('dashboard')}
