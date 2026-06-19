@@ -135,6 +135,8 @@ export const DEFAULT_CONFIG: AppConfig = {
   receiptAd: "Stock descontado correctamente del almacén de distribución.",
   categories: ["Abarrotes", "Lácteos y Quesos", "Conservas y Enlatados"],
   isBlocked: false,
+  themeColor: "teal",
+  themeMode: "dark",
   taxes: {
     generalRate: 7,
     liquorRate: 10,

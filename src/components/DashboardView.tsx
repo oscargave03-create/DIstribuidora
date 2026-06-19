@@ -181,13 +181,13 @@ export default function DashboardView({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Buscar por Nombre, SKU, Categoría..."
-                className="bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-teal-500 min-w-64"
+                className="bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-brand min-w-64"
               />
             </div>
 
             {/* Safety alert filter toggle */}
             <button
-              type="button"
+               type="button"
               onClick={() => setShowOnlyAlerts(!showOnlyAlerts)}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-semibold font-mono transition cursor-pointer ${
                 showOnlyAlerts 
@@ -205,9 +205,9 @@ export default function DashboardView({
             <button
               type="button"
               onClick={onAddProduct}
-              className="flex items-center justify-center gap-2 bg-gradient-to-tr from-teal-500 to-emerald-400 hover:scale-[1.01] active:scale-[0.99] text-slate-950 font-bold px-5 py-2.5 rounded-xl transition shadow-lg shadow-teal-500/10 text-sm cursor-pointer self-start lg:self-auto w-full lg:w-auto"
+              className="flex items-center justify-center gap-2 bg-gradient-to-tr from-brand to-brand-hover hover:scale-[1.01] active:scale-[0.99] text-slate-950 font-black px-6 py-2.5 rounded-xl transition shadow-lg shadow-brand/10 text-sm cursor-pointer self-start lg:self-auto w-full lg:w-auto"
             >
-              <Plus className="w-4 h-4 text-slate-950" />
+              <Plus className="w-4 h-4 text-slate-950 stroke-[3px]" />
               <span>Dar de alta producto</span>
             </button>
           ) : (
@@ -225,10 +225,10 @@ export default function DashboardView({
               type="button"
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer ${
                 selectedCategory === cat
-                  ? 'bg-slate-950 border-teal-500/50 text-teal-400 border font-bold'
-                  : 'text-slate-450 hover:text-slate-200'
+                  ? 'bg-slate-950 border-brand/50 text-brand border font-black shadow-md shadow-brand/5'
+                  : 'text-slate-400 hover:text-slate-205'
               }`}
             >
               {cat}
@@ -237,9 +237,11 @@ export default function DashboardView({
         </div>
       </div>
 
-      {/* Main Catalog inventory list table */}
-      <div className="bg-slate-900 border border-slate-850 rounded-3xl overflow-hidden p-6 shadow-sm">
-        <div className="overflow-x-auto">
+      {/* Main Catalog inventory list container (Responsive layout compatible) */}
+      <div className="bg-slate-900 border border-slate-850 rounded-3xl overflow-hidden p-4 md:p-6 shadow-sm">
+        
+        {/* DESKTOP TABLE VIEW: only visible from md screens upwards */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-850 text-[10px] text-slate-400 uppercase tracking-widest font-mono">
@@ -398,6 +400,117 @@ export default function DashboardView({
             </tbody>
           </table>
         </div>
+
+        {/* MOBILE CARD VIEW: visible only on small devices (under md break-point) */}
+        <div className="md:hidden space-y-4">
+          <AnimatePresence>
+            {processedProducts.length > 0 ? (
+              processedProducts.map((p) => {
+                const isLow = p.quantity <= p.minQuantity;
+                const isOut = p.quantity === 0;
+
+                return (
+                  <motion.div
+                    key={`mob-${p.id}`}
+                    layout
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 8 }}
+                    className="bg-slate-950/60 border border-slate-850/80 p-4.5 rounded-2xl flex flex-col gap-3"
+                  >
+                    {/* Header: SKU & Category Badge */}
+                    <div className="flex justify-between items-center sm:items-start gap-2">
+                      <span className="text-[10px] font-mono bg-slate-900 border border-slate-850 px-2 py-0.5 rounded text-slate-400 uppercase tracking-widest leading-none">
+                        {p.sku}
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-slate-900 text-[10px] font-medium text-teal-400/90 border border-teal-500/15">
+                        {p.category}
+                      </span>
+                    </div>
+
+                    {/* Product Name & Description */}
+                    <div>
+                      <h4 className="text-sm font-bold text-white line-clamp-1">{p.name}</h4>
+                      <p className="text-[11px] text-slate-500 line-clamp-2 mt-1 leading-normal">
+                        {p.description || "Sin descripción registrada."}
+                      </p>
+                    </div>
+
+                    {/* Price and Stock levels */}
+                    <div className="flex items-center justify-between pt-3 border-t border-slate-850/60 pb-1">
+                      <div>
+                        <span className="text-[9px] text-slate-500 uppercase block font-mono">Precio Unitario</span>
+                        <span className="text-sm font-bold text-white">$ {p.price.toFixed(2)}</span>
+                      </div>
+
+                      <div className="text-right">
+                        <span className="text-[9px] text-slate-500 uppercase block font-mono">Disponibilidad</span>
+                        {isLow ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono">
+                            {isOut ? (
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shrink-0"></span>
+                            ) : (
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
+                            )}
+                            <span>{p.quantity} un.</span>
+                          </span>
+                        ) : (
+                          <span className="text-sm font-bold text-teal-400 font-mono">{p.quantity} un.</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Stock Adjustment & actions sector */}
+                    <div className="flex items-center justify-between pt-3 border-t border-slate-850/60">
+                      <div>
+                        {allowedActions.adjust_stock ? (
+                          <button
+                            type="button"
+                            onClick={() => onQuickAdjust(p)}
+                            className="px-3 py-1.5 bg-slate-900 border border-slate-800 hover:border-slate-700 hover:text-white rounded-lg text-xs font-bold text-slate-350 transition active:scale-95 cursor-pointer"
+                          >
+                            Ajustar Cantidad
+                          </button>
+                        ) : (
+                          <span className="text-[10px] text-slate-650 font-mono uppercase italic">Lectura</span>
+                        )}
+                      </div>
+
+                      {/* Edit / Delete clusters */}
+                      <div className="flex items-center gap-1">
+                        {allowedActions.edit_product && (
+                          <button
+                            type="button"
+                            onClick={() => onEditProduct(p)}
+                            className="p-2 rounded-lg text-slate-400 hover:text-teal-400 hover:bg-teal-500/10 transition cursor-pointer"
+                            title="Editar"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        )}
+                        {allowedActions.delete_product && (
+                          <button
+                            type="button"
+                            onClick={() => onDeleteProduct(p)}
+                            className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+                            title="Bajar"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })
+            ) : (
+              <div className="py-12 text-center text-slate-500 text-xs italic bg-slate-950/40 rounded-2xl border border-slate-850/30">
+                No se encontraron artículos registrados que coincidan con los filtros de visualización.
+              </div>
+            )}
+          </AnimatePresence>
+        </div>
+
       </div>
     </div>
   );

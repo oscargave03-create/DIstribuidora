@@ -68,6 +68,8 @@ export interface AppConfig {
   categories: string[];
   logoUrl?: string; // Base64 or image URL for distributor logo
   isBlocked?: boolean; // Trial/Demo expiration block field
+  themeColor?: string; // App primary theme color key (e.g., 'teal', 'blue', 'emerald', etc.)
+  themeMode?: 'dark' | 'light' | 'dim'; // 'dark' is default, 'light' is light mode, 'dim' is eye-protection warm-dark
   taxes: {
     generalRate: number;
     liquorRate: number;

@@ -428,8 +428,8 @@ export default function ReportsView({ products, history, config }: ReportsViewPr
           </div>
         </div>
 
-        {/* Audit data layout table */}
-        <div className="overflow-x-auto">
+        {/* Audit data layout container (Responsive layout compatible) */}
+        <div className="overflow-x-auto hidden md:block">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-850 text-[10px] text-slate-450 uppercase tracking-widest font-mono">
@@ -504,7 +504,7 @@ export default function ReportsView({ products, history, config }: ReportsViewPr
                       </td>
                       <td className="py-3.5 pl-6 text-slate-300">
                         <div className="flex items-center gap-1.5">
-                          <User className="w-3.5 h-3.5 text-slate-500" />
+                          <User className="w-3.5 h-3.5 text-slate-550" />
                           <span>{item.userName}</span>
                         </div>
                       </td>
@@ -523,6 +523,94 @@ export default function ReportsView({ products, history, config }: ReportsViewPr
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* MOBILE CARDS LOGS VIEW: visible only on small viewports */}
+        <div className="md:hidden space-y-4">
+          {filteredHistory.length > 0 ? (
+            filteredHistory.map((item) => {
+              let badgeColor = "bg-slate-800 text-slate-400 border-slate-750";
+              let textSign = "";
+              let varColor = "text-slate-400 font-mono";
+
+              if (item.type === 'create') {
+                badgeColor = "bg-teal-500/10 text-teal-300 border-teal-500/20";
+                textSign = "+";
+                varColor = "text-teal-400 font-extrabold";
+              } else if (item.type === 'add') {
+                badgeColor = "bg-emerald-500/10 text-emerald-300 border-emerald-500/20";
+                textSign = "+";
+                varColor = "text-emerald-400 font-extrabold";
+              } else if (item.type === 'subtract') {
+                badgeColor = "bg-rose-500/10 text-rose-300 border-rose-500/20";
+                textSign = "";
+                varColor = "text-rose-400 font-extrabold";
+              } else if (item.type === 'delete') {
+                badgeColor = "bg-red-950 text-red-400 border-red-900";
+                varColor = "text-red-400";
+              } else if (item.type === 'update') {
+                badgeColor = "bg-purple-500/10 text-purple-350 border-purple-500/20";
+              }
+
+              return (
+                <div 
+                  key={`kardex-mob-${item.id}`} 
+                  className="bg-slate-950/60 p-4 rounded-2xl border border-slate-850/70 space-y-3 font-sans text-xs"
+                >
+                  {/* Top line: Date & Mode badge */}
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] text-slate-450 font-mono flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-slate-500" />
+                      {new Date(item.timestamp).toLocaleString('es-ES', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold font-mono tracking-wider border uppercase ${badgeColor}`}>
+                      {item.type}
+                    </span>
+                  </div>
+
+                  {/* Product name & user responsible */}
+                  <div>
+                    <h4 className="font-bold text-white text-xs">{item.productName}</h4>
+                    <p className="text-[11px] text-slate-500 font-mono mt-0.5 flex items-center gap-1">
+                      <User className="w-3 h-3 text-slate-600" />
+                      Por: {item.userName}
+                    </p>
+                  </div>
+
+                  {/* Stock variation & final stock box */}
+                  <div className="bg-slate-900/50 p-2 rounded-xl flex items-center justify-between border border-slate-850/60">
+                    <div>
+                      <span className="text-[9px] font-mono text-slate-500 block uppercase">Variación</span>
+                      <span className={`text-xs font-bold font-mono ${varColor}`}>
+                        {item.type === 'update' || item.type === 'delete' ? '-' : `${textSign}${item.changeAmount}`}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[9px] font-mono text-slate-500 block uppercase">Stock Final</span>
+                      <span className="text-xs font-bold font-mono text-slate-200">
+                        {item.type === 'delete' ? '0' : item.newQuantity} un.
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Notes & reason */}
+                  <div className="text-[11px] text-slate-400 bg-slate-950/40 p-2 rounded-xl border border-slate-900/40 italic font-mono leading-normal">
+                    <span className="text-[9px] text-slate-600 uppercase font-bold block not-italic font-sans mb-0.5">Nota de Auditoría</span>
+                    "{item.notes}"
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="py-12 text-center text-slate-500 text-xs italic bg-slate-950/40 rounded-2xl border border-slate-850/35">
+              Sin eventos registrados en Kardex para estos filtros de búsqueda.
+            </div>
+          )}
         </div>
       </div>
 

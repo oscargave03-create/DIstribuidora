@@ -482,17 +482,17 @@ export default function PointOfSaleView({
   };
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start font-sans">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start font-sans">
       
       {/* Search and products catalogs side (Saves 8 columns) */}
-      <div className="xl:col-span-7 space-y-5">
+      <div className="lg:col-span-7 space-y-5">
         
         {/* Filter / Search header Bar */}
         <div className="bg-slate-900 border border-slate-850 p-5 rounded-3xl space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h3 className="text-base font-bold text-white font-display flex items-center gap-2">
-                <Store className="w-5 h-5 text-teal-400" />
+                <Store className="w-5 h-5 text-brand" />
                 Caja Registradora / Punto de Venta
               </h3>
               <p className="text-xs text-slate-400 mt-1">
@@ -508,7 +508,7 @@ export default function PointOfSaleView({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar producto alimenticio por nombre o código SKU..."
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all font-sans"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all font-sans"
             />
           </div>
 
@@ -521,7 +521,7 @@ export default function PointOfSaleView({
                 onClick={() => setSelectedCategory(cat)}
                 className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition cursor-pointer font-semibold ${
                   selectedCategory === cat 
-                    ? 'bg-slate-950 border border-teal-500/50 text-teal-400 font-bold' 
+                    ? 'bg-slate-950 border border-brand/50 text-brand font-bold' 
                     : 'text-slate-500 hover:text-slate-350'
                 }`}
               >
@@ -547,7 +547,7 @@ export default function PointOfSaleView({
                       ? 'border-slate-850 opacity-55 cursor-not-allowed' 
                       : isLow
                         ? 'border-amber-500/30 hover:border-amber-500/60 bg-slate-900/80'
-                        : 'border-slate-850 hover:border-teal-500/40'
+                        : 'border-slate-850 hover:border-brand/40'
                   }`}
                 >
                   <div>
@@ -558,7 +558,7 @@ export default function PointOfSaleView({
                       </span>
                     </div>
 
-                    <h4 className="text-sm font-bold text-white group-hover:text-teal-400 transition-colors line-clamp-1">
+                    <h4 className="text-sm font-bold text-white group-hover:text-brand transition-colors line-clamp-1">
                       {p.name}
                     </h4>
                     <p className="text-[11px] text-slate-500 line-clamp-2 mt-1 leading-normal">
@@ -569,7 +569,7 @@ export default function PointOfSaleView({
                   <div className="mt-5 pt-3 border-t border-slate-850 flex items-center justify-between">
                     <div>
                       <span className="text-[10px] text-slate-500 block uppercase font-mono">Precio Unitario</span>
-                      <span className="text-base font-extrabold text-teal-400">$ {p.price.toFixed(2)}</span>
+                      <span className="text-base font-extrabold text-brand">$ {p.price.toFixed(2)}</span>
                     </div>
 
                     <div className="text-right">
@@ -595,17 +595,17 @@ export default function PointOfSaleView({
       </div>
 
       {/* Cart & Billing transaction side (Saves 5 columns) */}
-      <div className="xl:col-span-5 sticky top-24">
+      <div className="lg:col-span-5 sticky top-24">
         <div className="bg-slate-900 border border-slate-850 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
           
           {/* Cart Header */}
           <div className="p-5 bg-slate-950/50 border-b border-slate-850/80 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <ShoppingCart className="w-5 h-5 text-teal-400" />
+              <ShoppingCart className="w-5 h-5 text-brand" />
               <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
                 Orden Directa Mostrador
               </h3>
-              <span className="bg-teal-500/10 border border-teal-500/30 text-teal-400 text-xs font-bold font-mono px-2 py-0.5 rounded-full">
+              <span className="bg-brand-muted border border-brand/30 text-brand text-xs font-bold font-mono px-2 py-0.5 rounded-full">
                 {cart.reduce((s, c) => s + c.quantity, 0)}
               </span>
             </div>
@@ -652,7 +652,7 @@ export default function PointOfSaleView({
                       >
                         <Minus className="w-3.5 h-3.5" />
                       </button>
-                      <span className="px-2.5 text-xs font-mono font-bold text-teal-400">{item.quantity}</span>
+                      <span className="px-2.5 text-xs font-mono font-bold text-brand">{item.quantity}</span>
                       <button
                         type="button"
                         onClick={() => updateCartQty(item.product.id, 1)}
@@ -694,7 +694,7 @@ export default function PointOfSaleView({
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
                 placeholder="Ej: Oscar Guevara, Tienda El Carmen, etc."
-                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-teal-500"
+                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-brand"
               />
             </div>
 
@@ -733,7 +733,7 @@ export default function PointOfSaleView({
 
               <div className="flex justify-between text-base font-extrabold text-white pt-2 border-t border-slate-850">
                 <span className="font-display">TOTAL A COBRAR:</span>
-                <span className="text-teal-400">$ {cartTotals.total.toFixed(2)}</span>
+                <span className="text-brand">$ {cartTotals.total.toFixed(2)}</span>
               </div>
             </div>
 
@@ -741,7 +741,7 @@ export default function PointOfSaleView({
             <button
               type="submit"
               disabled={loading || cart.length === 0 || !allowedActions.process_sale}
-              className="w-full bg-teal-500 hover:bg-teal-400 disabled:opacity-40 text-slate-950 font-bold py-3.5 rounded-xl transition shadow-lg shadow-teal-500/10 cursor-pointer text-sm font-sans uppercase flex items-center justify-center gap-2"
+              className="w-full bg-brand hover:bg-brand-hover disabled:opacity-40 text-slate-950 font-black py-3.5 rounded-xl transition shadow-lg shadow-brand/10 cursor-pointer text-sm font-sans uppercase flex items-center justify-center gap-2"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
@@ -786,7 +786,7 @@ export default function PointOfSaleView({
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <div className="w-10 h-10 bg-teal-500/10 text-teal-600 rounded-full flex items-center justify-center mx-auto mb-1 no-print">
+                  <div className="w-10 h-10 bg-brand-muted text-brand rounded-full flex items-center justify-center mx-auto mb-1 no-print">
                     <Check className="w-5 h-5" />
                   </div>
                 )}
@@ -877,7 +877,7 @@ export default function PointOfSaleView({
                 <button
                   type="button"
                   onClick={handlePrint}
-                  className="w-full py-3 bg-teal-600 hover:bg-teal-500 text-white font-sans font-bold rounded-xl transition cursor-pointer text-xs flex items-center justify-center gap-2 shadow-md shadow-teal-600/10"
+                  className="w-full py-3 bg-brand hover:bg-brand-hover text-slate-950 font-sans font-black rounded-xl transition cursor-pointer text-xs flex items-center justify-center gap-2 shadow-md shadow-brand/10"
                 >
                   <Printer className="w-4.5 h-4.5" />
                   <span>Imprimir Factura</span>

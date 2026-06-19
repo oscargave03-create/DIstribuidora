@@ -20,7 +20,11 @@ import {
   Upload,
   Image,
   Lock,
-  Unlock
+  Unlock,
+  Palette,
+  Moon,
+  Eye,
+  Sun
 } from 'lucide-react';
 import { AppConfig, UserPermission } from '../types';
 import { isSupabaseConfigured } from '../supabaseClient';
@@ -58,6 +62,8 @@ export default function AdminPanel({
   const [receiptAd, setReceiptAd] = useState(config.receiptAd);
   const [logoUrl, setLogoUrl] = useState(config.logoUrl || '');
   const [isDragOver, setIsDragOver] = useState(false);
+  const [themeColor, setThemeColor] = useState(config.themeColor || 'teal');
+  const [themeMode, setThemeMode] = useState(config.themeMode || 'dark');
 
   // Taxes
   const [generalRate, setGeneralRate] = useState(config.taxes.generalRate);
@@ -103,6 +109,8 @@ export default function AdminPanel({
         receiptFooter,
         receiptAd,
         logoUrl,
+        themeColor,
+        themeMode,
         taxes: {
           generalRate,
           liquorRate,
@@ -246,7 +254,7 @@ export default function AdminPanel({
             onClick={() => setSubTab('system')}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition cursor-pointer ${
               subTab === 'system'
-                ? 'bg-slate-950 text-teal-400 font-bold border border-teal-500/10'
+                ? 'bg-slate-950 text-brand font-bold border border-brand/10'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -257,7 +265,7 @@ export default function AdminPanel({
             onClick={() => setSubTab('categories')}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition cursor-pointer ${
               subTab === 'categories'
-                ? 'bg-slate-950 text-teal-400 font-bold border border-teal-500/10'
+                ? 'bg-slate-950 text-brand font-bold border border-brand/10'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -268,7 +276,7 @@ export default function AdminPanel({
             onClick={() => setSubTab('users')}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition cursor-pointer ${
               subTab === 'users'
-                ? 'bg-slate-950 text-teal-400 font-bold border border-teal-500/10'
+                ? 'bg-slate-950 text-brand font-bold border border-brand/10'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -416,6 +424,128 @@ export default function AdminPanel({
                       placeholder="Ej. Ctrl. de Stock"
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-teal-500 transition"
                     />
+                  </div>
+                </div>
+              </div>
+
+              {/* BRAND COLOR PRESET SELECTOR */}
+              <div className="bg-slate-950/40 p-5 rounded-2xl border border-slate-850">
+                <h3 className="text-sm font-bold text-slate-200 border-b border-slate-850 pb-2 mb-4 uppercase tracking-wider flex items-center gap-1.5">
+                  <Palette className="w-4 h-4 text-brand" /> Tema y Paleta de Colores de la App
+                </h3>
+                <p className="text-xs text-slate-400 mb-4 leading-normal">
+                  Personalice el color primario y los contrastes de toda la plataforma. Al hacer clic en <strong className="text-white">Guardar Cambios</strong> en el pie de página, el nuevo tema se propagará en tiempo real en esta y en las terminales activas de tus cajeros y supervisores.
+                </p>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3.5">
+                  {[
+                    { key: 'teal', name: 'Turquesa (Principal)', class: 'bg-[#2dd4bf]' },
+                    { key: 'blue', name: 'Azul Corporativo', class: 'bg-[#60a5fa]' },
+                    { key: 'emerald', name: 'Verde Esmeralda', class: 'bg-[#34d399]' },
+                    { key: 'amber', name: 'Ámbar Cálido', class: 'bg-[#fbbf24]' },
+                    { key: 'rose', name: 'Rosa Carmín', class: 'bg-[#fb7185]' },
+                    { key: 'indigo', name: 'Índigo Cósmico', class: 'bg-[#818cf8]' },
+                    { key: 'purple', name: 'Púrpura Mágico', class: 'bg-[#c084fc]' },
+                    { key: 'orange', name: 'Naranja Fuego', class: 'bg-[#fb923c]' },
+                    { key: 'sky', name: 'Celeste Cielo', class: 'bg-[#38bdf8]' }
+                  ].map((preset) => {
+                    const isSelected = themeColor === preset.key;
+                    return (
+                      <button
+                        key={preset.key}
+                        type="button"
+                        onClick={() => setThemeColor(preset.key)}
+                        className={`flex items-center gap-2.5 p-3 rounded-2xl border text-left cursor-pointer transition active:scale-95 ${
+                          isSelected
+                            ? 'bg-slate-950 border-brand text-white shadow-lg shadow-brand/10'
+                            : 'bg-slate-950/60 border-slate-850/80 hover:bg-slate-950/40 text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        {/* Swatch sphere */}
+                        <div className={`w-5 h-5 rounded-full ring-2 ring-slate-950 shrink-0 ${preset.class} flex items-center justify-center`}>
+                          {isSelected && (
+                            <Check className="w-3 h-3 text-slate-950 stroke-[3.5px]" />
+                          )}
+                        </div>
+                        <span className="text-[11px] font-bold tracking-tight leading-none">
+                          {preset.name}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Visual Contrast Modes (Dark, Light, Warm Eye protection) */}
+                <div className="mt-6 pt-5 border-t border-slate-850/60">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-3">
+                    Modo Visual de Contraste
+                  </span>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Dark Mode */}
+                    <button
+                      type="button"
+                      onClick={() => setThemeMode('dark')}
+                      className={`flex flex-col gap-2.5 p-4.5 rounded-2xl border text-left cursor-pointer transition-all duration-200 active:scale-98 ${
+                        themeMode === 'dark'
+                          ? 'bg-slate-950 border-brand text-white shadow-lg shadow-brand/10'
+                          : 'bg-slate-950/60 border-slate-850/80 hover:bg-slate-950/40 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={`p-1.5 rounded-lg ${themeMode === 'dark' ? 'bg-brand/10 text-brand' : 'bg-slate-900 text-slate-500'}`}>
+                          <Moon className="w-4 h-4" />
+                        </div>
+                        <span className="text-xs font-bold">Modo Oscuro Original</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 leading-normal">
+                        La interfaz por defecto elegante y estilizada con tonos azul-slate oscuro óptima para entornos convencionales.
+                      </p>
+                    </button>
+
+                    {/* Dim Eye Protection Mode */}
+                    <button
+                      type="button"
+                      onClick={() => setThemeMode('dim')}
+                      className={`flex flex-col gap-2.5 p-4.5 rounded-2xl border text-left cursor-pointer transition-all duration-200 active:scale-98 ${
+                        themeMode === 'dim'
+                          ? 'bg-slate-950 border-amber-500/80 text-amber-100 shadow-md shadow-amber-500/5'
+                          : 'bg-slate-950/60 border-slate-850/80 hover:bg-slate-950/40 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={`p-1.5 rounded-lg ${themeMode === 'dim' ? 'bg-amber-500/10 text-amber-400' : 'bg-slate-900 text-slate-500'}`}>
+                          <Eye className="w-4 h-4" />
+                        </div>
+                        <span className="text-xs font-bold flex items-center gap-1.5">
+                          Protección de Vista <span className="text-[8px] bg-amber-500/15 font-mono font-bold text-amber-400 px-1 py-0.5 rounded uppercase leading-none">Recomendado</span>
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 leading-normal">
+                        Filtro de luz azul con tonos sepias, ámbar cálidos y grises atenuados para combatir la fatiga ocular y cuidar sus ojos en turnos largos.
+                      </p>
+                    </button>
+
+                    {/* Light Mode */}
+                    <button
+                      type="button"
+                      onClick={() => setThemeMode('light')}
+                      className={`flex flex-col gap-2.5 p-4.5 rounded-2xl border text-left cursor-pointer transition-all duration-200 active:scale-98 ${
+                        themeMode === 'light'
+                          ? 'bg-white border-brand text-slate-900 shadow-md'
+                          : 'bg-slate-950/60 border-slate-850/80 hover:bg-slate-950/40 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={`p-1.5 rounded-lg ${themeMode === 'light' ? 'bg-amber-100 text-amber-600' : 'bg-slate-900 text-slate-500'}`}>
+                          <Sun className="w-4 h-4" />
+                        </div>
+                        <span className="text-xs font-bold">Tema Claro Limpio</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 leading-normal">
+                        Entorno luminoso con fondos claros y textos nítidos de alto contraste, ideal para oficinas con mucha luz natural o artificial.
+                      </p>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -718,7 +848,7 @@ export default function AdminPanel({
                   <button
                     type="submit"
                     disabled={savingConfig}
-                    className="px-6 py-2.5 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-xl transition cursor-pointer text-xs flex items-center gap-2"
+                    className="px-6 py-2.5 bg-brand hover:bg-brand-hover text-slate-950 font-extrabold rounded-xl transition cursor-pointer text-xs flex items-center gap-2 shadow-md shadow-brand/10 select-none"
                   >
                     <Save className="w-4 h-4" />
                     {savingConfig ? 'Guardando...' : 'Guardar Cambios'}

@@ -76,6 +76,93 @@ export default function App() {
   const [adjustingProduct, setAdjustingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null); // Custom visual confirmation
 
+  // Dynamic theme colors & modes effect
+  useEffect(() => {
+    const theme = appConfig?.themeColor || 'teal';
+    const mode = appConfig?.themeMode || 'dark';
+
+    const presets: Record<string, { brand400: string; brand500: string; muted: string; border: string }> = {
+      teal: { brand400: '#2dd4bf', brand500: '#14b8a6', muted: 'rgba(45, 212, 191, 0.1)', border: 'rgba(45, 212, 191, 0.15)' },
+      blue: { brand400: '#60a5fa', brand500: '#3b82f6', muted: 'rgba(96, 165, 250, 0.1)', border: 'rgba(96, 165, 250, 0.15)' },
+      emerald: { brand400: '#34d399', brand500: '#10b981', muted: 'rgba(52, 211, 153, 0.1)', border: 'rgba(52, 211, 153, 0.15)' },
+      amber: { brand400: '#fbbf24', brand500: '#f59e0b', muted: 'rgba(251, 191, 36, 0.1)', border: 'rgba(251, 191, 36, 0.15)' },
+      rose: { brand400: '#fb7185', brand500: '#f43f5e', muted: 'rgba(251, 113, 133, 0.1)', border: 'rgba(251, 113, 133, 0.15)' },
+      indigo: { brand400: '#818cf8', brand500: '#6366f1', muted: 'rgba(129, 140, 248, 0.1)', border: 'rgba(129, 140, 248, 0.15)' },
+      purple: { brand400: '#c084fc', brand500: '#a855f7', muted: 'rgba(192, 132, 252, 0.1)', border: 'rgba(192, 132, 252, 0.15)' },
+      orange: { brand400: '#fb923c', brand500: '#f97316', muted: 'rgba(251, 146, 60, 0.1)', border: 'rgba(251, 146, 60, 0.15)' },
+      sky: { brand400: '#38bdf8', brand500: '#0ea5e9', muted: 'rgba(56, 189, 248, 0.1)', border: 'rgba(56, 189, 248, 0.15)' },
+    };
+
+    const sel = presets[theme] || presets.teal;
+    const r = document.documentElement;
+    
+    // Set brand color parameters
+    r.style.setProperty('--color-brand-400', sel.brand400);
+    r.style.setProperty('--color-brand-500', sel.brand500);
+    r.style.setProperty('--color-brand-muted-val', sel.muted);
+    r.style.setProperty('--color-brand-border-val', sel.border);
+
+    // Set mode CSS Variables
+    const modeConfigs: Record<string, Record<string, string>> = {
+      dark: {
+        '--bg-slate-950': '#020617',
+        '--bg-slate-900': '#090d16',
+        '--bg-slate-850': '#151e2e',
+        '--bg-slate-800': '#1e293b',
+        '--text-white': '#ffffff',
+        '--text-slate-100': '#f1f5f9',
+        '--text-slate-200': '#e2e8f0',
+        '--text-slate-300': '#cbd5e1',
+        '--text-slate-350': '#cbd5e1',
+        '--text-slate-400': '#94a3b8',
+        '--text-slate-450': '#64748b',
+        '--text-slate-500': '#64748b',
+        '--text-slate-550': '#475569',
+        '--text-slate-600': '#334155',
+        '--text-slate-650': '#1e293b',
+      },
+      dim: {
+        '--bg-slate-950': '#13110f',
+        '--bg-slate-900': '#1c1916',
+        '--bg-slate-850': '#27231e',
+        '--bg-slate-800': '#332d28',
+        '--text-white': '#fdfaf2',
+        '--text-slate-100': '#f1e8dc',
+        '--text-slate-200': '#e3d7c7',
+        '--text-slate-300': '#cbbaa6',
+        '--text-slate-350': '#bea992',
+        '--text-slate-400': '#aa9885',
+        '--text-slate-450': '#8d7e6d',
+        '--text-slate-500': '#7d7060',
+        '--text-slate-550': '#6d6153',
+        '--text-slate-600': '#5d5246',
+        '--text-slate-650': '#4d4339',
+      },
+      light: {
+        '--bg-slate-950': '#f3f4f6',
+        '--bg-slate-900': '#ffffff',
+        '--bg-slate-850': '#e5e7eb',
+        '--bg-slate-800': '#d1d5db',
+        '--text-white': '#0f172a',
+        '--text-slate-100': '#1f2937',
+        '--text-slate-200': '#374151',
+        '--text-slate-300': '#4b5563',
+        '--text-slate-350': '#4b5563',
+        '--text-slate-400': '#6b7280',
+        '--text-slate-450': '#4b5563',
+        '--text-slate-550': '#6b7280',
+        '--text-slate-500': '#6b7280',
+        '--text-slate-600': '#9ca3af',
+        '--text-slate-650': '#d1d5db',
+      }
+    };
+
+    const selMode = modeConfigs[mode] || modeConfigs.dark;
+    Object.entries(selMode).forEach(([key, val]) => {
+      r.style.setProperty(key, val);
+    });
+  }, [appConfig?.themeColor, appConfig?.themeMode]);
+
   // Auth synchronization hook
   useEffect(() => {
     const unsub = observeAuth((session) => {
@@ -298,7 +385,7 @@ export default function App() {
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-slate-550">Correo de Contacto:</span>
-                <span className="font-mono font-semibold text-teal-400 select-all">oscargave03@gmail.com</span>
+                <span className="font-mono font-semibold text-brand select-all">oscargave03@gmail.com</span>
               </div>
               <div className="flex items-center justify-between text-xs border-t border-slate-900 pt-2 mt-2">
                 <span className="text-slate-550">Empresa / Entidad:</span>
@@ -326,35 +413,42 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans antialiased selection:bg-teal-500 selection:text-slate-900">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans antialiased selection:bg-brand selection:text-slate-900 overflow-x-hidden relative">
       
+      {/* Premium Unique Background Ambient Halos */}
+      <div className="absolute top-[-10%] right-[10%] w-[500px] h-[500px] rounded-full bg-brand/5 blur-[150px] pointer-events-none z-0" />
+      <div className="absolute bottom-[20%] left-[-10%] w-[500px] h-[350px] rounded-full bg-brand/5 blur-[130px] pointer-events-none z-0" />
+
       {/* Upper Navigation Header Bar */}
-      <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-md border-b border-slate-900">
+      <header className="sticky top-0 z-40 bg-slate-950/85 backdrop-blur-md border-b border-slate-900/80 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
           
           {/* Logo brand */}
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-tr from-teal-500 to-emerald-400 rounded-xl flex items-center justify-center shadow-md shadow-teal-500/10">
-              <Package className="w-5 h-5 text-slate-950" />
+            <div className="relative group">
+              <div className="absolute -inset-1 rounded-xl bg-gradient-to-r from-brand to-brand-hover opacity-30 blur-[6px] group-hover:opacity-75 transition duration-500" />
+              <div className="relative w-9 h-9 bg-gradient-to-tr from-brand to-brand-hover rounded-xl flex items-center justify-center shadow-md shadow-brand/10">
+                <Package className="w-5 h-5 text-slate-950 stroke-[2.2px]" />
+              </div>
             </div>
             <div>
-              <h1 className="text-sm font-bold text-white tracking-wide font-display">
+              <h1 className="text-sm font-black text-white tracking-wide font-display">
                 {appConfig?.systemTitle || "Catálogo de Inventario"}
               </h1>
-              <span className="text-[10px] text-slate-500 font-mono tracking-wider block">
+              <span className="text-[10px] text-slate-550 font-mono tracking-wider block">
                 {appConfig?.systemSubtitle || "Ctrl. de Stock"}
               </span>
             </div>
           </div>
 
           {/* Center Tabs Control */}
-          <nav className="flex items-center bg-slate-900 p-1 border border-slate-850 rounded-2xl text-xs font-semibold gap-1">
+          <nav className="flex items-center bg-slate-900/90 p-1 border border-slate-850/80 rounded-2xl text-xs font-semibold gap-1 z-10 shadow-lg">
             {activeAllowedTabs.dashboard && (
               <button
                 onClick={() => setActiveTab('dashboard')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl transition cursor-pointer ${
+                className={`flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl transition-all cursor-pointer ${
                   activeTab === 'dashboard' 
-                    ? 'bg-slate-950 text-teal-400 font-bold border border-teal-500/10' 
+                    ? 'bg-slate-950 text-brand font-black border border-brand/20 shadow-md shadow-brand/5 scale-[1.02]' 
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -366,9 +460,9 @@ export default function App() {
             {activeAllowedTabs.pos && (
               <button
                 onClick={() => setActiveTab('pos')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl transition cursor-pointer ${
+                className={`flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl transition-all cursor-pointer ${
                   activeTab === 'pos' 
-                    ? 'bg-slate-950 text-teal-400 font-bold border border-teal-500/10' 
+                    ? 'bg-slate-950 text-brand font-black border border-brand/20 shadow-md shadow-brand/5 scale-[1.02]' 
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -380,9 +474,9 @@ export default function App() {
             {activeAllowedTabs.alerts && (
               <button
                 onClick={() => setActiveTab('alerts')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl transition cursor-pointer relative ${
+                className={`flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl transition-all cursor-pointer relative ${
                   activeTab === 'alerts' 
-                    ? 'bg-slate-950 text-amber-400 font-bold border border-amber-500/10' 
+                    ? 'bg-slate-950 text-amber-400 font-black border border-amber-500/20 shadow-md shadow-amber-500/5 scale-[1.02]' 
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -399,9 +493,9 @@ export default function App() {
             {activeAllowedTabs.reports && (
               <button
                 onClick={() => setActiveTab('reports')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl transition cursor-pointer ${
+                className={`flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl transition-all cursor-pointer ${
                   activeTab === 'reports' 
-                    ? 'bg-slate-950 text-indigo-400 font-bold border border-indigo-500/10' 
+                    ? 'bg-slate-950 text-indigo-400 font-black border border-indigo-500/20 shadow-md shadow-indigo-500/5 scale-[1.02]' 
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -413,9 +507,9 @@ export default function App() {
             {activeAllowedTabs.admin && (
               <button
                 onClick={() => setActiveTab('admin')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl transition cursor-pointer ${
+                className={`flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl transition-all cursor-pointer ${
                   activeTab === 'admin' 
-                    ? 'bg-slate-950 text-emerald-400 font-bold border border-emerald-500/10' 
+                    ? 'bg-slate-950 text-emerald-400 font-black border border-emerald-500/20 shadow-md shadow-emerald-500/5 scale-[1.02]' 
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -471,7 +565,7 @@ export default function App() {
             </div>
 
             <div className="hidden md:flex items-center gap-2.5 bg-slate-900 border border-slate-850 px-3.5 py-1.5 rounded-2xl">
-              <div className="w-7 h-7 bg-teal-500/10 rounded-full flex items-center justify-center text-teal-400">
+              <div className="w-7 h-7 bg-brand-muted rounded-full flex items-center justify-center text-brand">
                 <User className="w-4 h-4" />
               </div>
               <div className="text-left">
