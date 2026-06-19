@@ -24,7 +24,17 @@ import {
   Palette,
   Moon,
   Eye,
-  Sun
+  Sun,
+  Package,
+  Store,
+  Boxes,
+  Database,
+  Coffee,
+  ShoppingBag,
+  TrendingUp,
+  Wrench,
+  ShoppingCart,
+  ShieldCheck
 } from 'lucide-react';
 import { AppConfig, UserPermission } from '../types';
 import { isSupabaseConfigured } from '../supabaseClient';
@@ -54,6 +64,8 @@ export default function AdminPanel({
   // Load configs local states
   const [systemTitle, setSystemTitle] = useState(config.systemTitle);
   const [systemSubtitle, setSystemSubtitle] = useState(config.systemSubtitle);
+  const [systemLogoType, setSystemLogoType] = useState<'icon' | 'image'>(config.systemLogoType || 'icon');
+  const [systemIconName, setSystemIconName] = useState<string>(config.systemIconName || 'Package');
   const [companyName, setCompanyName] = useState(config.companyName);
   const [ruc, setRuc] = useState(config.ruc);
   const [telephone, setTelephone] = useState(config.telephone);
@@ -117,6 +129,8 @@ export default function AdminPanel({
         ...config,
         systemTitle,
         systemSubtitle,
+        systemLogoType,
+        systemIconName,
         companyName,
         ruc,
         telephone,
@@ -452,6 +466,92 @@ export default function AdminPanel({
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-teal-500 transition"
                     />
                   </div>
+                </div>
+
+                {/* Logo & Icon Selection section */}
+                <div className="mt-4 bg-slate-950/20 p-4 rounded-xl border border-slate-850">
+                  <span className="text-[10px] font-black text-teal-400 uppercase tracking-widest block mb-3">Identidad Visual & Logo de Cabecera</span>
+                  
+                  <div className="flex flex-wrap gap-4 items-center mb-4 border-b border-slate-850 pb-4">
+                    <span className="text-xs text-slate-400">Tipo de Logo en cabecera:</span>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSystemLogoType('icon')}
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border ${
+                          systemLogoType === 'icon' 
+                            ? 'bg-brand text-slate-950 border-brand' 
+                            : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                        }`}
+                      >
+                        Icono Vectorial (Lucide)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSystemLogoType('image')}
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border ${
+                          systemLogoType === 'image' 
+                            ? 'bg-brand text-slate-950 border-brand' 
+                            : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                        }`}
+                      >
+                        Imagen Logotipo Distribuidora
+                      </button>
+                    </div>
+                  </div>
+
+                  {systemLogoType === 'icon' ? (
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Selecciona un icono representativo:</span>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                        {[
+                          { id: 'Package', icon: Package, name: 'Paquete / Caja' },
+                          { id: 'Store', icon: Store, name: 'Tienda / Local' },
+                          { id: 'Boxes', icon: Boxes, name: 'Inventario' },
+                          { id: 'Database', icon: Database, name: 'Base de Datos' },
+                          { id: 'Coffee', icon: Coffee, name: 'Café / Alimento' },
+                          { id: 'ShoppingBag', icon: ShoppingBag, name: 'Bolsa Compra' },
+                          { id: 'TrendingUp', icon: TrendingUp, name: 'Crecimiento' },
+                          { id: 'Wrench', icon: Wrench, name: 'Soporte / Taller' },
+                          { id: 'Layers', icon: Layers, name: 'Capas / Stock' },
+                          { id: 'ShoppingCart', icon: ShoppingCart, name: 'Carrito' },
+                          { id: 'ShieldCheck', icon: ShieldCheck, name: 'Seguridad' }
+                        ].map((item) => {
+                          const IconComponent = item.icon;
+                          const isSelected = systemIconName === item.id;
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => setSystemIconName(item.id)}
+                              className={`p-2.5 rounded-xl flex flex-col items-center justify-center gap-1.5 transition border text-center ${
+                                isSelected 
+                                  ? 'bg-brand/15 border-brand text-brand font-bold' 
+                                  : 'bg-slate-950/50 border-slate-850 text-slate-400 hover:text-white hover:border-slate-800'
+                              }`}
+                            >
+                              <IconComponent className="w-5 h-5" />
+                              <span className="text-[9px] font-mono leading-none tracking-tight">{item.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-850 text-xs text-slate-400 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0">
+                        {logoUrl ? (
+                          <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                        ) : (
+                          <span className="text-[9px] text-slate-650 font-bold">Sin logo</span>
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-300">Logotipo de la Distribuidora</p>
+                        <p className="text-[10px] text-slate-500 mt-0.5">Automáticamente sincronizado con el logotipo cargado en la sección de datos fiscales de impresión (abajo).</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

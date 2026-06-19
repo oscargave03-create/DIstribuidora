@@ -22,8 +22,28 @@ import {
   ShoppingCart,
   Lock,
   Unlock,
-  Menu
+  Menu,
+  Store,
+  Boxes,
+  Coffee,
+  ShoppingBag,
+  TrendingUp,
+  Wrench
 } from 'lucide-react';
+
+export const appBrandingIcons: Record<string, any> = {
+  Package,
+  Store,
+  Boxes,
+  Database,
+  Coffee,
+  ShoppingBag,
+  TrendingUp,
+  Wrench,
+  Layers,
+  ShoppingCart,
+  ShieldCheck
+};
 
 import { 
   observeAuth, 
@@ -452,9 +472,23 @@ export default function App() {
               {/* Header inside drawer */}
               <div className="flex items-center justify-between border-b border-slate-850 pb-5 mb-6">
                 <div className="flex items-center gap-2.5">
-                  <div className="relative w-8 h-8 bg-gradient-to-tr from-brand to-brand-hover rounded-lg flex items-center justify-center shadow-md shadow-brand/10">
-                    <Package className="w-4.5 h-4.5 text-slate-950 stroke-[2.2px]" />
-                  </div>
+                  {appConfig?.systemLogoType === 'image' && appConfig?.logoUrl ? (
+                    <div className="relative w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-slate-950 border border-slate-850 shadow-sm shrink-0">
+                      <img 
+                        src={appConfig.logoUrl} 
+                        alt="Logo" 
+                        className="w-full h-full object-contain"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                  ) : (() => {
+                    const SystemBrandIcon = appBrandingIcons[appConfig?.systemIconName || 'Package'] || Package;
+                    return (
+                      <div className="relative w-8 h-8 bg-gradient-to-tr from-brand to-brand-hover rounded-lg flex items-center justify-center shadow-md shadow-brand/10 shrink-0">
+                        <SystemBrandIcon className="w-4.5 h-4.5 text-slate-950 stroke-[2.2px]" />
+                      </div>
+                    );
+                  })()}
                   <div>
                     <h2 className="text-xs font-black text-white tracking-wide uppercase font-display">
                       {appConfig?.systemTitle || "Inventario"}
@@ -527,7 +561,7 @@ export default function App() {
                     <AlertTriangle className="w-4.5 h-4.5 shrink-0" />
                     <span>Alertas de Stock</span>
                     {activeAlertsCount > 0 && (
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse shadow-sm">
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 bg-rose-500 text-[#ffffff] text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse shadow-sm border border-rose-600/20">
                         {activeAlertsCount}
                       </span>
                     )}
@@ -617,12 +651,26 @@ export default function App() {
               <Menu className="w-5 h-5" />
             </button>
 
-            <div className="relative group">
-              <div className="absolute -inset-1 rounded-xl bg-gradient-to-r from-brand to-brand-hover opacity-30 blur-[6px] group-hover:opacity-75 transition duration-500" />
-              <div className="relative w-9 h-9 bg-gradient-to-tr from-brand to-brand-hover rounded-xl flex items-center justify-center shadow-md shadow-brand/10">
-                <Package className="w-5 h-5 text-slate-950 stroke-[2.2px]" />
+            {appConfig?.systemLogoType === 'image' && appConfig?.logoUrl ? (
+              <div className="relative w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center bg-slate-900 border border-slate-800 shadow-md">
+                <img 
+                  src={appConfig.logoUrl} 
+                  alt="App Logo" 
+                  className="w-full h-full object-contain"
+                  referrerPolicy="no-referrer"
+                />
               </div>
-            </div>
+            ) : (() => {
+              const SystemBrandIcon = appBrandingIcons[appConfig?.systemIconName || 'Package'] || Package;
+              return (
+                <div className="relative group">
+                  <div className="absolute -inset-1 rounded-xl bg-gradient-to-r from-brand to-brand-hover opacity-30 blur-[6px] group-hover:opacity-75 transition duration-500" />
+                  <div className="relative w-9 h-9 bg-gradient-to-tr from-brand to-brand-hover rounded-xl flex items-center justify-center shadow-md shadow-brand/10">
+                    <SystemBrandIcon className="w-5 h-5 text-slate-950 stroke-[2.2px]" />
+                  </div>
+                </div>
+              );
+            })()}
             <div>
               <h1 className="text-sm font-black text-white tracking-wide font-display">
                 {appConfig?.systemTitle || "Catálogo de Inventario"}
@@ -675,7 +723,7 @@ export default function App() {
                 <AlertTriangle className="w-4 h-4" />
                 <span className="hidden sm:inline">Alertas de Stock</span>
                 {activeAlertsCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse shadow-sm">
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-[#ffffff] text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse shadow-sm border border-rose-600/20">
                     {activeAlertsCount}
                   </span>
                 )}
@@ -779,14 +827,14 @@ export default function App() {
 
       {/* Global alert bar visible only to Oscar when system is locked */}
       {isSuperAdmin && appConfig?.isBlocked && (
-        <div className="bg-rose-950/90 text-white px-4 py-3 text-xs font-medium flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-rose-900 shadow-lg select-none">
+        <div className="bg-rose-950 text-[#ffffff] px-4 py-3 text-xs font-medium flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-rose-900 shadow-lg select-none">
           <div className="flex items-center gap-2.5">
             <span className="flex h-2.5 w-2.5 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-450 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
             </span>
-            <span className="text-center sm:text-left text-slate-200">
-              <strong className="text-white">¡ALERTA OSCAR (REPRESENTANTE):</strong> Has activado el <span className="text-rose-450 font-bold underline">BLOQUEO DE DEMOSTRACIÓN</span>. Los terminales ordinarios y cajeros están suspendidos.
+            <span className="text-center sm:text-left text-rose-100 font-bold">
+              <strong className="text-[#ffffff]">¡ALERTA OSCAR (REPRESENTANTE):</strong> Has activado el <span className="text-rose-400 font-bold underline">BLOQUEO DE DEMOSTRACIÓN</span>. Los terminales ordinarios y cajeros están suspendidos.
             </span>
           </div>
           <button
@@ -798,9 +846,9 @@ export default function App() {
                 });
               }
             }}
-            className="bg-white hover:bg-slate-100 text-rose-950 px-4 py-1.5 rounded-xl font-bold transition text-[11px] cursor-pointer shadow-md shrink-0 flex items-center gap-1.5"
+            className="bg-[#ffffff] hover:bg-neutral-100 text-rose-950 px-4 py-1.5 rounded-xl font-bold transition text-[11px] cursor-pointer shadow-md shrink-0 flex items-center gap-1.5 border border-rose-900/10"
           >
-            <Unlock className="w-3.5 h-3.5" />
+            <Unlock className="w-3.5 h-3.5 text-rose-950" />
             <span>DESBLOQUEAR AHORA</span>
           </button>
         </div>

@@ -127,6 +127,8 @@ const INITIAL_HISTORY: StockHistory[] = [
 export const DEFAULT_CONFIG: AppConfig = {
   systemTitle: "Control de Inventario",
   systemSubtitle: "Conexión Supabase",
+  systemLogoType: "icon",
+  systemIconName: "Package",
   companyName: "DISTRIBUIDORA DE ALIMENTOS",
   ruc: "1792348574001",
   telephone: "(02) 299-900",

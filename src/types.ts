@@ -59,6 +59,8 @@ export interface UserPermission {
 export interface AppConfig {
   systemTitle: string;
   systemSubtitle: string;
+  systemLogoType?: 'icon' | 'image';
+  systemIconName?: string;
   companyName: string;
   ruc: string;
   telephone: string;
