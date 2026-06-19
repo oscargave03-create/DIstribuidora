@@ -13,7 +13,8 @@ import {
   Store,
   User,
   Hash,
-  Printer
+  Printer,
+  Package
 } from 'lucide-react';
 import { Product, AppConfig } from '../types';
 
@@ -336,55 +337,66 @@ export default function PointOfSaleView({
             <title>Factura ${salesTicket.id}</title>
             <style>
               @page {
-                size: 80mm auto;
+                size: auto;
                 margin: 0;
               }
-              body {
+              * {
+                box-sizing: border-box;
+              }
+              html, body {
                 font-family: 'Courier New', Courier, monospace, sans-serif;
                 color: #000000;
                 margin: 0;
-                padding: 4mm 6mm;
+                padding: 4mm 5mm;
                 background-color: #ffffff;
-                width: 68mm; /* Configuración óptima para papel de 80mm de Bixolon para evitar cortes de borde */
+                width: 100%;
                 font-size: 12px;
-                line-height: 1.3;
+                line-height: 1.35;
               }
               .text-center { text-align: center; }
               .logo-img {
-                max-height: 48px;
-                max-width: 140px;
+                max-height: 52px;
+                max-width: 160px;
                 object-fit: contain;
-                margin: 0 auto 6px auto;
+                margin: 0 auto 8px auto;
+                display: block;
+              }
+              .logo-svg {
+                margin: 0 auto 8px auto;
                 display: block;
               }
               .header {
-                border-bottom: 1px dashed #000000;
-                padding-bottom: 8px;
-                margin-bottom: 8px;
+                border-bottom: 1.5px dashed #000000;
+                padding-bottom: 10px;
+                margin-bottom: 10px;
               }
               .company-title {
-                font-size: 13px;
+                font-size: 14px;
                 font-weight: bold;
-                margin: 0 0 2px 0;
+                margin: 0 0 3px 0;
                 text-transform: uppercase;
+                letter-spacing: 0.5px;
               }
               .subtitle {
                 font-size: 10px;
-                margin: 1px 0;
+                margin: 2px 0;
               }
               .doc-title {
                 font-size: 11px;
                 font-weight: bold;
                 text-transform: uppercase;
-                margin-top: 6px;
-                letter-spacing: 0.5px;
+                margin-top: 8px;
+                letter-spacing: 0.8px;
+                border: 1px solid #000000;
+                display: inline-block;
+                padding: 2px 8px;
               }
               .metadata {
                 font-size: 10px;
-                line-height: 1.4;
-                border-bottom: 1px dashed #000000;
-                padding-bottom: 6px;
-                margin-bottom: 6px;
+                line-height: 1.45;
+                border-bottom: 1.5px dashed #000000;
+                padding-bottom: 8px;
+                margin-bottom: 8px;
               }
               .meta-row {
                 display: flex;
@@ -393,47 +405,55 @@ export default function PointOfSaleView({
               .items-table {
                 width: 100%;
                 border-collapse: collapse;
-                margin-bottom: 8px;
+                margin-bottom: 10px;
               }
               .items-table th {
                 font-size: 10px;
                 text-transform: uppercase;
-                border-bottom: 1px solid #000000;
-                padding-bottom: 2px;
+                border-bottom: 1.5px solid #000000;
+                padding-bottom: 4px;
                 text-align: left;
               }
               .totals {
-                border-bottom: 1px dashed #000000;
-                padding-bottom: 6px;
-                margin-bottom: 8px;
+                border-bottom: 1.5px dashed #000000;
+                padding-bottom: 8px;
+                margin-bottom: 10px;
                 font-size: 11px;
               }
               .total-row {
                 display: flex;
                 justify-content: space-between;
-                margin-bottom: 2px;
+                margin-bottom: 3px;
               }
               .grand-total {
                 display: flex;
                 justify-content: space-between;
-                font-size: 14px;
+                font-size: 15px;
                 font-weight: bold;
-                margin-top: 4px;
-                padding-top: 4px;
-                border-top: 1px dashed #000000;
+                margin-top: 6px;
+                padding-top: 6px;
+                border-top: 1.5px dashed #000000;
               }
               .footer {
                 text-align: center;
                 font-size: 9px;
-                line-height: 1.2;
-                margin-top: 8px;
+                line-height: 1.3;
+                margin-top: 12px;
               }
-              .footer p { margin: 2px 0; }
+              .footer p { margin: 3px 0; }
             </style>
           </head>
           <body>
             <div class="header text-center">
-              ${config?.logoUrl ? `<img src="${config.logoUrl}" alt="Logo" class="logo-img" />` : ''}
+              ${config?.logoUrl ? `
+                <img src="${config.logoUrl}" alt="Logo" class="logo-img" />
+              ` : `
+                <svg class="logo-svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                  <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+              `}
               <div class="company-title">${config?.companyName || "DISTRIBUIDORA DE ALIMENTOS"}</div>
               <div class="subtitle">${config?.address || "Quito, Ecuador"}</div>
               <div class="subtitle">Tel: ${config?.telephone || "(02) 299-900"} • RUC: ${config?.ruc || "1792348574001"}</div>
@@ -468,7 +488,7 @@ export default function PointOfSaleView({
               
               ${taxesBlockHtml}
               
-              <div class="total-row" style="margin-top: 2px; padding-top: 2px; border-top: 1px dotted #000000; font-size: 10px; color: #444444;">
+              <div class="total-row" style="margin-top: 2px; padding-top: 2px; border-top: 1.5px dotted #000000; font-size: 10px; color: #000000;">
                 <span>Total Impuestos:</span>
                 <span>$ ${totalTaxes.toFixed(2)}</span>
               </div>
@@ -482,7 +502,7 @@ export default function PointOfSaleView({
             <div class="footer text-center">
               <p>${config?.receiptFooter || "¡Gracias por abastecerse con nosotros!"}</p>
               <p style="font-style: italic;">${config?.receiptAd || "Distribuidora Oficial Almacén"}</p>
-              <p style="font-size: 8px; margin-top: 4px; color: #333333;">Impreso en Bixolon SRP-Q300</p>
+              <p style="font-size: 8px; margin-top: 5px; color: #333333;">Sistema POS de Distribución</p>
             </div>
 
             <script>
@@ -824,8 +844,8 @@ export default function PointOfSaleView({
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <div className="w-10 h-10 bg-brand-muted text-brand rounded-full flex items-center justify-center mx-auto mb-1 no-print">
-                    <Check className="w-5 h-5" />
+                  <div className="w-12 h-12 bg-slate-100 text-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-2 border border-slate-200">
+                    <Package className="w-6 h-6 stroke-[2.2px] text-slate-800" />
                   </div>
                 )}
                 <h4 className="font-sans font-bold text-slate-900 text-sm">{config?.companyName || "DISTRIBUIDORA DE ALIMENTOS"}</h4>
