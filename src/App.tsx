@@ -204,24 +204,30 @@ export default function App() {
     };
   }, [user]);
 
-  // Real-time settings and permissions synchronization hook
+  // Real-time settings synchronization hook (always active to load login screen styling!)
+  useEffect(() => {
+    const configUserId = user?.uid || 'general-config';
+    const unsubConfig = subscribeConfig(configUserId, (config) => {
+      setAppConfig(config);
+    });
+
+    return () => {
+      unsubConfig();
+    };
+  }, [user?.uid]);
+
+  // Real-time permissions synchronization hook
   useEffect(() => {
     if (!user) {
-      setAppConfig(null);
       setAllPermissionsList([]);
       return;
     }
-
-    const unsubConfig = subscribeConfig(user.uid, (config) => {
-      setAppConfig(config);
-    });
 
     const unsubPerms = subscribeUserPermissions(user.uid, (perms) => {
       setAllPermissionsList(perms);
     });
 
     return () => {
-      unsubConfig();
       unsubPerms();
     };
   }, [user]);
@@ -345,7 +351,7 @@ export default function App() {
   }
 
   if (!user) {
-    return <LoginView onLoginSuccess={(u) => setUser(u)} />;
+    return <LoginView onLoginSuccess={(u) => setUser(u)} config={appConfig || undefined} />;
   }
 
   // Trial / demo lock-out block screen

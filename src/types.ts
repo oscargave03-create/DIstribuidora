@@ -67,6 +67,18 @@ export interface AppConfig {
   receiptAd: string;
   categories: string[];
   logoUrl?: string; // Base64 or image URL for distributor logo
+  loginTitle?: string; // Custom login screen main title
+  loginSubtitle?: string; // Custom login screen thin subtitle
+  loginDescription?: string; // Custom login screen bottom description
+  loginLogoUrl?: string; // Custom login screen logo Url
+  loginThemeColor?: string; // Custom login brand tint color (e.g., 'teal', 'blue', 'emerald', 'amber', 'rose', 'indigo', 'orange', 'violet')
+  loginBgStyle?: 'glow' | 'minimal' | 'light' | 'aurora'; // Custom login background style
+  loginCardStyle?: 'glass' | 'solid' | 'flat'; // Card style for login form
+  loginCardTitle?: string; // Custom title for the inner login card (default "Acceso de Usuarios Autorizados")
+  loginUserLabel?: string; // Custom email/username field label
+  loginPasswordLabel?: string; // Custom password field label
+  loginButtonText?: string; // Custom sign-in button text
+  loginFooterText?: string; // Custom small indicator text (default "Mecanismo ABAC Zero-Trust Bloqueado")
   isBlocked?: boolean; // Trial/Demo expiration block field
   themeColor?: string; // App primary theme color key (e.g., 'teal', 'blue', 'emerald', etc.)
   themeMode?: 'dark' | 'light' | 'dim'; // 'dark' is default, 'light' is light mode, 'dim' is eye-protection warm-dark

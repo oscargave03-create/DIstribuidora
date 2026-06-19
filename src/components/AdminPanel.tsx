@@ -65,6 +65,21 @@ export default function AdminPanel({
   const [themeColor, setThemeColor] = useState(config.themeColor || 'teal');
   const [themeMode, setThemeMode] = useState(config.themeMode || 'dark');
 
+  // Login Customized State
+  const [loginTitle, setLoginTitle] = useState(config.loginTitle || 'Sistema de Inventario');
+  const [loginSubtitle, setLoginSubtitle] = useState(config.loginSubtitle || 'Control & Distribución');
+  const [loginDescription, setLoginDescription] = useState(config.loginDescription || 'Aplicación de registro y control de stock rápido, despachos inmediatos y facturación electrónica integrada.');
+  const [loginLogoUrl, setLoginLogoUrl] = useState(config.loginLogoUrl || '');
+  const [loginThemeColor, setLoginThemeColor] = useState(config.loginThemeColor || 'teal');
+  const [loginBgStyle, setLoginBgStyle] = useState(config.loginBgStyle || 'glow');
+  const [loginCardStyle, setLoginCardStyle] = useState(config.loginCardStyle || 'glass');
+  const [loginCardTitle, setLoginCardTitle] = useState(config.loginCardTitle || 'Acceso de Usuarios Autorizados');
+  const [loginUserLabel, setLoginUserLabel] = useState(config.loginUserLabel || 'Usuario o Correo');
+  const [loginPasswordLabel, setLoginPasswordLabel] = useState(config.loginPasswordLabel || 'Contraseña de Seguridad');
+  const [loginButtonText, setLoginButtonText] = useState(config.loginButtonText || 'Ingresar al Sistema');
+  const [loginFooterText, setLoginFooterText] = useState(config.loginFooterText || 'Mecanismo ABAC Zero-Trust Bloqueado');
+  const [isDragOverLogin, setIsDragOverLogin] = useState(false);
+
   // Taxes
   const [generalRate, setGeneralRate] = useState(config.taxes.generalRate);
   const [liquorRate, setLiquorRate] = useState(config.taxes.liquorRate);
@@ -111,6 +126,18 @@ export default function AdminPanel({
         logoUrl,
         themeColor,
         themeMode,
+        loginTitle,
+        loginSubtitle,
+        loginDescription,
+        loginLogoUrl,
+        loginThemeColor,
+        loginBgStyle,
+        loginCardStyle,
+        loginCardTitle,
+        loginUserLabel,
+        loginPasswordLabel,
+        loginButtonText,
+        loginFooterText,
         taxes: {
           generalRate,
           liquorRate,
@@ -546,6 +573,351 @@ export default function AdminPanel({
                         Entorno luminoso con fondos claros y textos nítidos de alto contraste, ideal para oficinas con mucha luz natural o artificial.
                       </p>
                     </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECCIÓN DE PERSONALIZACIÓN COMPLETA DE PANTALLA LOGIN */}
+              <div className="bg-slate-950/40 p-5 rounded-2xl border border-slate-850">
+                <h3 className="text-sm font-bold text-slate-200 border-b border-slate-850 pb-2 mb-4 uppercase tracking-wider flex items-center gap-1.5">
+                  <Palette className="w-4 h-4 text-brand" /> Personalización de la Pantalla de Login (Inicio de Sesión)
+                </h3>
+                <p className="text-xs text-slate-400 mb-6 leading-normal">
+                  Rediseñe la ventana completa de inicio de sesión de los usuarios. Modifique los textos generales, logos personalizados, descripciones del pie de Login y defina un color de énfasis específico independiente del color general de la app.
+                </p>
+
+                {/* GRID DE PARÁMETROS ESTRUCTURADO COMO UN CMS PREMIUM */}
+                <div className="space-y-6 mb-6">
+                  {/* SUB SECCIÓN 1: DISEÑO, FONDO Y ESTILO DE TARJETA */}
+                  <div className="p-4 bg-slate-950/60 rounded-2xl border border-slate-850 space-y-4">
+                    <span className="text-[10px] font-bold text-brand uppercase tracking-wider block border-b border-slate-850/50 pb-2">
+                      1. Fondos Ambientales y Estilos de Tarjeta
+                    </span>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* ESTILO DE FONDO */}
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                          Estilo Visual del Fondo de Login
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            { key: 'glow', name: 'Halo Neón', desc: 'Fondo oscuro con halos vibrantes' },
+                            { key: 'minimal', name: 'Obsidiana Mate', desc: 'Fondo sólido oscuro pulido' },
+                            { key: 'light', name: 'Empresarial Claro', desc: 'Tema claro impecable' },
+                            { key: 'aurora', name: 'Aurora Fluida', desc: 'Gradiente dinámico moderno' }
+                          ].map((style) => (
+                            <button
+                              key={style.key}
+                              type="button"
+                              onClick={() => setLoginBgStyle(style.key as any)}
+                              className={`p-2.5 rounded-xl border text-left flex flex-col justify-between transition cursor-pointer active:scale-95 ${
+                                loginBgStyle === style.key
+                                  ? 'bg-slate-900 border-brand text-white shadow-lg'
+                                  : 'bg-slate-950/60 border-slate-850 text-slate-400 hover:border-slate-800'
+                              }`}
+                            >
+                              <span className="text-xs font-bold block">{style.name}</span>
+                              <span className="text-[8.5px] text-slate-500 leading-tight mt-1">{style.desc}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* ESTILO DE TARJETA */}
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                          Estructura de Tarjeta de Formulario
+                        </label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { key: 'glass', name: 'Vidrio Esmeril', desc: 'Translúcido' },
+                            { key: 'solid', name: 'Sólido Hermético', desc: 'Opaque' },
+                            { key: 'flat', name: 'Plano Minimal', desc: 'Delgado border' }
+                          ].map((style) => (
+                            <button
+                              key={style.key}
+                              type="button"
+                              onClick={() => setLoginCardStyle(style.key as any)}
+                              className={`p-2.5 rounded-xl border text-left flex flex-col justify-between transition h-full cursor-pointer active:scale-95 ${
+                                loginCardStyle === style.key
+                                  ? 'bg-slate-900 border-brand text-white shadow-lg'
+                                  : 'bg-slate-950/60 border-slate-850 text-slate-400 hover:border-slate-800'
+                              }`}
+                            >
+                              <span className="text-xs font-bold block">{style.name}</span>
+                              <span className="text-[8.5px] text-slate-500 leading-tight mt-1">{style.desc}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SUB SECCIÓN 2: TEXTOS DEL TÍTULO Y PRESENTACIÓN */}
+                  <div className="p-4 bg-slate-950/60 rounded-2xl border border-slate-850 space-y-4">
+                    <span className="text-[10px] font-bold text-brand uppercase tracking-wider block border-b border-slate-850/50 pb-2">
+                      2. Textos Principales del Encabezado
+                    </span>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Título de Bienvenida de Login</label>
+                        <input
+                          type="text"
+                          value={loginTitle}
+                          onChange={(e) => setLoginTitle(e.target.value)}
+                          placeholder="Ej. Sistema de Inventario"
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-brand transition"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Subtítulo Descriptivo de Login</label>
+                        <input
+                          type="text"
+                          value={loginSubtitle}
+                          onChange={(e) => setLoginSubtitle(e.target.value)}
+                          placeholder="Ej. Control & Distribución"
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-brand transition"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SUB SECCIÓN 3: PERSONALIZACIÓN INTERNA DE LA TARJETA */}
+                  <div className="p-4 bg-slate-950/60 rounded-2xl border border-slate-850 space-y-4">
+                    <span className="text-[10px] font-bold text-brand uppercase tracking-wider block border-b border-slate-850/50 pb-2">
+                      3. Formulario, Etiquetas e Inputs de la Tarjeta
+                    </span>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Título de la Tarjeta de Acceso</label>
+                        <input
+                          type="text"
+                          value={loginCardTitle}
+                          onChange={(e) => setLoginCardTitle(e.target.value)}
+                          placeholder="Ej. Acceso de Usuarios Autorizados"
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-brand transition"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Texto del Botón de Ingreso</label>
+                        <input
+                          type="text"
+                          value={loginButtonText}
+                          onChange={(e) => setLoginButtonText(e.target.value)}
+                          placeholder="Ej. Ingresar al Sistema"
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-brand transition"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Etiqueta de Campo de Usuario</label>
+                        <input
+                          type="text"
+                          value={loginUserLabel}
+                          onChange={(e) => setLoginUserLabel(e.target.value)}
+                          placeholder="Ej. Usuario o Correo"
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-brand transition font-semibold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Etiqueta de Campo de Contraseña</label>
+                        <input
+                          type="text"
+                          value={loginPasswordLabel}
+                          onChange={(e) => setLoginPasswordLabel(e.target.value)}
+                          placeholder="Ej. Contraseña de Seguridad"
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-brand transition font-semibold"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SUB SECCIÓN 4: LOGOTIPO, PIE DE PÁGINA Y MARCAS */}
+                  <div className="p-4 bg-slate-950/60 rounded-2xl border border-slate-850 space-y-4">
+                    <span className="text-[10px] font-bold text-brand uppercase tracking-wider block border-b border-slate-850/50 pb-2">
+                      4.Logotipo Personalizado y Textos de Marcas Inferiores
+                    </span>
+
+                    <div className="space-y-4">
+                      {/* UPLOAD LOGO FOR LOGIN */}
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                          Logo de la Empresa (Inicio de Sesión)
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+                          <div className="sm:col-span-2">
+                            <div
+                              onDragOver={(e) => {
+                                e.preventDefault();
+                                setIsDragOverLogin(true);
+                              }}
+                              onDragLeave={() => setIsDragOverLogin(false)}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                setIsDragOverLogin(false);
+                                const files = e.dataTransfer.files;
+                                if (files && files.length > 0) {
+                                  const file = files[0];
+                                  const reader = new FileReader();
+                                  reader.onload = (event) => {
+                                    if (event.target?.result) {
+                                      setLoginLogoUrl(event.target.result as string);
+                                    }
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
+                              onClick={() => document.getElementById('loginLogoFileInput')?.click()}
+                              className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 min-h-[140px] ${
+                                isDragOverLogin 
+                                  ? 'border-brand bg-brand/10 text-brand' 
+                                  : loginLogoUrl 
+                                    ? 'border-slate-800 bg-slate-900/40 hover:bg-slate-900/80' 
+                                    : 'border-slate-800 bg-slate-950 hover:bg-slate-900/40 hover:border-slate-700'
+                              }`}
+                            >
+                              <input
+                                id="loginLogoFileInput"
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const files = e.target.files;
+                                  if (files && files.length > 0) {
+                                    const file = files[0];
+                                    const reader = new FileReader();
+                                    reader.onload = (event) => {
+                                      if (event.target?.result) {
+                                        setLoginLogoUrl(event.target.result as string);
+                                      }
+                                    };
+                                    reader.readAsDataURL(file);
+                                  }
+                                }}
+                              />
+
+                              {loginLogoUrl ? (
+                                <div className="relative group w-full flex flex-col items-center">
+                                  <img 
+                                    src={loginLogoUrl} 
+                                    alt="Logo Personalizado" 
+                                    className="max-h-20 max-w-full object-contain mb-2 rounded-lg bg-white p-1 border border-slate-700/50"
+                                    referrerPolicy="no-referrer"
+                                  />
+                                  <span className="text-[9px] text-brand font-medium">Logotipo configurado: Haz click o arrastra para cambiar</span>
+                                </div>
+                              ) : (
+                                <div className="space-y-2 flex flex-col items-center">
+                                  <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center text-slate-400">
+                                    <Upload className="w-3.5 h-3.5" />
+                                  </div>
+                                  <div className="text-[10px] font-medium text-slate-300">
+                                    Arrastra tu imagen aquí o <span className="text-brand underline">haz click</span>
+                                  </div>
+                                  <div className="text-[8.5px] text-slate-500">
+                                    Soporta PNG, JPEG o SVG (Se guardará localmente)
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col gap-2">
+                            {loginLogoUrl ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setLoginLogoUrl('');
+                                }}
+                                className="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-semibold py-2 px-3 rounded-lg border border-rose-500/20 flex items-center justify-center gap-1.5 transition cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                Quitar Imagen
+                              </button>
+                            ) : (
+                              <div className="text-[9px] text-slate-500 leading-normal bg-slate-900/30 p-3 rounded-xl border border-slate-850">
+                                Cargue el logotipo corporativo para la pantalla principal de contraseña.
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* TEXTS UNDER CARD AND DESCRIPTIONS */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Texto de Seguridad / Candado Pequeño (Bajo la Tarjeta)</label>
+                          <input
+                            type="text"
+                            value={loginFooterText}
+                            onChange={(e) => setLoginFooterText(e.target.value)}
+                            placeholder="Ej. Mecanismo ABAC Zero-Trust Bloqueado"
+                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-brand transition"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 font-sans">Párrafo de Descripción en el Pie General</label>
+                          <textarea
+                            value={loginDescription}
+                            onChange={(e) => setLoginDescription(e.target.value)}
+                            rows={2}
+                            placeholder="Ej. Aplicación de registro y control de stock rápido..."
+                            className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-brand transition resize-none leading-normal font-sans"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* LOGIN ACCENT TINT SELECTOR */}
+                <div className="pt-3 border-t border-slate-850/65">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-3">
+                    Color de Énfasis del Inicio de Sesión
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                    {[
+                      { key: 'teal', name: 'Turquesa', class: 'bg-[#2dd4bf]' },
+                      { key: 'blue', name: 'Azul Social', class: 'bg-[#60a5fa]' },
+                      { key: 'emerald', name: 'Verde Esmeralda', class: 'bg-[#34d399]' },
+                      { key: 'amber', name: 'Ámbar Cálido', class: 'bg-[#fbbf24]' },
+                      { key: 'rose', name: 'Rosa Carmín', class: 'bg-[#fb7185]' },
+                      { key: 'indigo', name: 'Índigo Cósmico', class: 'bg-[#818cf8]' },
+                      { key: 'purple', name: 'Púrpura', class: 'bg-[#c084fc]' },
+                      { key: 'orange', name: 'Naranja Fuego', class: 'bg-[#fb923c]' },
+                      { key: 'sky', name: 'Celeste', class: 'bg-[#38bdf8]' }
+                    ].map((preset) => {
+                      const isSelected = loginThemeColor === preset.key;
+                      return (
+                        <button
+                          key={preset.key}
+                          type="button"
+                          onClick={() => setLoginThemeColor(preset.key)}
+                          className={`flex items-center gap-2.5 p-3 rounded-2xl border text-left cursor-pointer transition active:scale-95 ${
+                            isSelected
+                              ? 'bg-slate-950 border-brand text-white shadow-md'
+                              : 'bg-slate-950/60 border-slate-850/80 hover:bg-slate-950/40 text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          <div className={`w-4 h-4 rounded-full ring-2 ring-slate-950 shrink-0 ${preset.class} flex items-center justify-center`}>
+                            {isSelected && (
+                              <Check className="w-2.5 h-2.5 text-slate-950 stroke-[4px]" />
+                            )}
+                          </div>
+                          <span className="text-[10px] font-bold">
+                            {preset.name}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

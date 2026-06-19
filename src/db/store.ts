@@ -137,6 +137,18 @@ export const DEFAULT_CONFIG: AppConfig = {
   isBlocked: false,
   themeColor: "teal",
   themeMode: "dark",
+  loginTitle: "Sistema de Inventario",
+  loginSubtitle: "Control & Distribución",
+  loginDescription: "Aplicación de registro y control de stock rápido, despachos inmediatos y facturación electrónica integrada.",
+  loginLogoUrl: "",
+  loginThemeColor: "teal",
+  loginBgStyle: "glow",
+  loginCardStyle: "glass",
+  loginCardTitle: "Acceso de Usuarios Autorizados",
+  loginUserLabel: "Usuario o Correo",
+  loginPasswordLabel: "Contraseña de Seguridad",
+  loginButtonText: "Ingresar al Sistema",
+  loginFooterText: "Mecanismo ABAC Zero-Trust Bloqueado",
   taxes: {
     generalRate: 7,
     liquorRate: 10,
@@ -899,6 +911,7 @@ export const storeUpdateConfig = async (
   }
 
   localStorage.setItem(`app_config_${userId}`, JSON.stringify(config));
+  localStorage.setItem(`app_config_general-config`, JSON.stringify(config));
   window.dispatchEvent(new Event("local_config_update"));
   window.dispatchEvent(new Event("local_inventory_update"));
   return Promise.resolve();
