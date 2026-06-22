@@ -42,7 +42,7 @@ import {
   CheckCircle,
   HelpCircle
 } from 'lucide-react';
-import { AppConfig, UserPermission } from '../types';
+import { AppConfig, UserPermission, ProductSectionObj } from '../types';
 import { isSupabaseConfigured } from '../supabaseClient';
 
 interface AdminPanelProps {
@@ -53,6 +53,10 @@ interface AdminPanelProps {
   onDeletePermission: (id: string) => Promise<void>;
   currentUserUid: string;
   products?: any[]; // Allow optional product tracking list for counting items in table
+  sections?: ProductSectionObj[];
+  onAddSection?: (sec: ProductSectionObj) => Promise<void>;
+  onUpdateSection?: (id: string, updates: Partial<ProductSectionObj>) => Promise<void>;
+  onDeleteSection?: (id: string) => Promise<void>;
 }
 
 export default function AdminPanel({
@@ -62,7 +66,11 @@ export default function AdminPanel({
   onUpdatePermission,
   onDeletePermission,
   currentUserUid,
-  products = []
+  products = [],
+  sections = [],
+  onAddSection,
+  onUpdateSection,
+  onDeleteSection
 }: AdminPanelProps) {
   // Tabs within administration
   const [subTab, setSubTab] = useState<'system' | 'categories' | 'users'>('system');
@@ -194,6 +202,9 @@ export default function AdminPanel({
 
   // Helper to ensure isFood or general properties are saved synced with categories
   const getSectionsList = (): any[] => {
+    if (sections && sections.length > 0) {
+      return sections;
+    }
     const details = config.sectionsDetail || [];
     const detailsMap = new Map(details.map(d => [d.name, d]));
     const syncedList: any[] = [];
@@ -237,15 +248,15 @@ export default function AdminPanel({
       return;
     }
     const cleanName = secName.trim();
-    if (config.categories.includes(cleanName)) {
+    const currentSections = getSectionsList();
+    if (currentSections.some(s => s.name.toLowerCase() === cleanName.toLowerCase())) {
       alert("Esta sección ya existe en el sistema.");
       return;
     }
 
     const cleanCode = (secCode.trim() || cleanName.slice(0, 3).toUpperCase()).toUpperCase();
-    const currentSections = getSectionsList();
 
-    const newSecObj = {
+    const newSecObj: ProductSectionObj = {
       id: `sec-${Date.now()}`,
       name: cleanName,
       code: cleanCode,
@@ -253,6 +264,10 @@ export default function AdminPanel({
       isFoodOrExempt: secIsFoodOrExempt,
       createdAt: new Date().toISOString()
     };
+
+    if (onAddSection) {
+      await onAddSection(newSecObj);
+    }
 
     const updatedCategories = [...config.categories, cleanName];
     const updatedDetails = [...currentSections, newSecObj];
@@ -274,7 +289,8 @@ export default function AdminPanel({
 
   // Delete Section Detail
   const handleDeleteDetailedSection = async (secId: string, name: string) => {
-    if (config.categories.length <= 1) {
+    const currentSections = getSectionsList();
+    if (currentSections.length <= 1) {
       alert("Debe haber por lo menos una sección/categoría autorizada.");
       return;
     }
@@ -289,7 +305,10 @@ export default function AdminPanel({
     }
 
     if (confirm(confirmMsg)) {
-      const currentSections = getSectionsList();
+      if (onDeleteSection) {
+        await onDeleteSection(secId);
+      }
+
       const updatedCategories = config.categories.filter(c => c !== name);
       const updatedDetails = currentSections.filter(s => s.id !== secId && s.name !== name);
 
@@ -324,9 +343,20 @@ export default function AdminPanel({
     if (!editingSec) return;
 
     // Check if renamed to something already existing (and it is not itself)
-    if (cleanName !== editingSec.name && config.categories.includes(cleanName)) {
+    if (cleanName.toLowerCase() !== editingSec.name.toLowerCase() && currentSections.some(s => s.name.toLowerCase() === cleanName.toLowerCase())) {
       alert("Ya existe otra sección con ese nombre.");
       return;
+    }
+
+    const updatedData = {
+      name: cleanName,
+      code: (editingSecCode.trim() || cleanName.slice(0, 3).toUpperCase()).toUpperCase(),
+      description: editingSecDescription.trim(),
+      isFoodOrExempt: editingSecIsFood
+    };
+
+    if (onUpdateSection) {
+      await onUpdateSection(editingSecId!, updatedData);
     }
 
     const updatedCats = config.categories.map(c => c === editingSec.name ? cleanName : c);
@@ -334,10 +364,7 @@ export default function AdminPanel({
       if (s.id === editingSecId) {
         return {
           ...s,
-          name: cleanName,
-          code: (editingSecCode.trim() || cleanName.slice(0, 3).toUpperCase()).toUpperCase(),
-          description: editingSecDescription.trim(),
-          isFoodOrExempt: editingSecIsFood
+          ...updatedData
         };
       }
       return s;

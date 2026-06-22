@@ -58,11 +58,15 @@ import {
   storeUpdateConfig,
   subscribeUserPermissions,
   storeUpdateUserPermission,
-  storeDeleteUserPermission
+  storeDeleteUserPermission,
+  subscribeSections,
+  storeAddSection,
+  storeUpdateSection,
+  storeDeleteSection
 } from './db/store';
 import { isConfigured } from './firebase';
 import { isSupabaseConfigured } from './supabaseClient';
-import { Product, StockHistory, UserSession, AppConfig, UserPermission } from './types';
+import { Product, StockHistory, UserSession, AppConfig, UserPermission, ProductSectionObj } from './types';
 
 // Page views
 import LoginView from './components/LoginView';
@@ -83,6 +87,7 @@ export default function App() {
   // Real-time data lists
   const [products, setProducts] = useState<Product[]>([]);
   const [history, setHistory] = useState<StockHistory[]>([]);
+  const [sections, setSections] = useState<ProductSectionObj[]>([]);
 
   // Config and permissions lists
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
@@ -238,6 +243,18 @@ export default function App() {
     };
   }, [user?.uid]);
 
+  // Real-time sections synchronization hook
+  useEffect(() => {
+    const configUserId = user?.uid || 'general-config';
+    const unsubSections = subscribeSections(configUserId, (data) => {
+      setSections(data);
+    });
+
+    return () => {
+      unsubSections();
+    };
+  }, [user?.uid]);
+
   // Real-time permissions synchronization hook
   useEffect(() => {
     if (!user) {
@@ -258,6 +275,11 @@ export default function App() {
   const activeAlertsCount = useMemo(() => {
     return products.filter(p => p.quantity <= p.minQuantity).length;
   }, [products]);
+
+  // Dynamic products & food categories synced from our Supabase tables
+  const dynamicCategories = useMemo(() => {
+    return sections.length > 0 ? sections.map(s => s.name) : (appConfig?.categories || []);
+  }, [sections, appConfig?.categories]);
 
   // Memoized user-level granular authorizations
   const isSuperAdmin = useMemo(() => {
@@ -872,7 +894,7 @@ export default function App() {
                 onDeleteProduct={(p) => setDeletingProduct(p)}
                 onQuickAdjust={(p) => setAdjustingProduct(p)}
                 activeAlertsCount={activeAlertsCount}
-                categoriesList={appConfig?.categories || []}
+                categoriesList={dynamicCategories}
                 allowedActions={activeAllowedActions}
               />
             )}
@@ -918,6 +940,16 @@ export default function App() {
                   await storeDeleteUserPermission(id);
                 }}
                 currentUserUid={user.uid}
+                sections={sections}
+                onAddSection={async (sec) => {
+                  await storeAddSection(user.uid, sec);
+                }}
+                onUpdateSection={async (id, updates) => {
+                  await storeUpdateSection(user.uid, id, updates);
+                }}
+                onDeleteSection={async (id) => {
+                  await storeDeleteSection(user.uid, id);
+                }}
               />
             )}
           </motion.div>
@@ -961,7 +993,7 @@ export default function App() {
         onClose={() => setShowAddModal(false)}
         onSubmit={handleAddProductSubmit}
         product={null}
-        categoriesList={appConfig?.categories || []}
+        categoriesList={dynamicCategories}
       />
 
       {/* 2. Edit Product modal */}
@@ -970,7 +1002,7 @@ export default function App() {
         onClose={() => setEditingProduct(null)}
         onSubmit={handleEditProductSubmit}
         product={editingProduct}
-        categoriesList={appConfig?.categories || []}
+        categoriesList={dynamicCategories}
       />
 
       {/* 3. Stock Adjustment replenishment dialog */}

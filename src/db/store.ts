@@ -1,4 +1,4 @@
-import { Product, StockHistory, UserSession, AppConfig, UserPermission } from '../types';
+import { Product, StockHistory, UserSession, AppConfig, UserPermission, ProductSectionObj } from '../types';
 import { supabase } from '../supabaseClient';
 
 export enum OperationType {
@@ -1112,5 +1112,211 @@ export const storeDeleteUserPermission = async (
   list = list.filter(p => p.id !== id);
   localStorage.setItem(`app_permissions_list`, JSON.stringify(list));
   window.dispatchEvent(new Event("local_permissions_update"));
+  return Promise.resolve();
+};
+
+// ==================== PRODUCT & FOOD SECTIONS (DYNAMIC SUPABASE SYNC) ====================
+
+const INITIAL_SECTIONS: ProductSectionObj[] = [
+  {
+    id: "sec-1",
+    name: "Abarrotes",
+    code: "ABA",
+    description: "Sección de abarrotes y productos básicos.",
+    isFoodOrExempt: true,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "sec-2",
+    name: "Lácteos y Quesos",
+    code: "LAC",
+    description: "Sección de derivados de la leche y quesos refrigerados.",
+    isFoodOrExempt: true,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "sec-3",
+    name: "Conservas y Enlatados",
+    code: "CON",
+    description: "Sección de alimentos en conserva, mariscos y vegetales enlatados.",
+    isFoodOrExempt: true,
+    createdAt: new Date().toISOString()
+  }
+];
+
+const getLocalSections = (userId: string): ProductSectionObj[] => {
+  const data = localStorage.getItem(`inv_sections_${userId}`);
+  if (!data) {
+    localStorage.setItem(`inv_sections_${userId}`, JSON.stringify(INITIAL_SECTIONS));
+    return INITIAL_SECTIONS;
+  }
+  try {
+    return JSON.parse(data);
+  } catch {
+    return INITIAL_SECTIONS;
+  }
+};
+
+const saveLocalSections = (userId: string, list: ProductSectionObj[]) => {
+  localStorage.setItem(`inv_sections_${userId}`, JSON.stringify(list));
+};
+
+export const subscribeSections = (
+  userId: string,
+  onData: (sections: ProductSectionObj[]) => void
+) => {
+  let active = true;
+
+  const fetchAndEmit = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('product_sections')
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        if (active) {
+          const mapped: ProductSectionObj[] = data.map(row => ({
+            id: row.id,
+            name: row.name,
+            code: row.code || '',
+            description: row.description || '',
+            isFoodOrExempt: !!row.is_food_or_exempt,
+            createdAt: row.created_at || new Date().toISOString()
+          }));
+          onData(mapped);
+          saveLocalSections(userId, mapped);
+        }
+      } else {
+        // Table empty -> seed with local sections
+        const local = getLocalSections(userId);
+        if (local && local.length > 0) {
+          const rows = local.map(s => ({
+            id: s.id,
+            name: s.name,
+            code: s.code,
+            description: s.description,
+            is_food_or_exempt: s.isFoodOrExempt,
+            created_at: s.createdAt
+          }));
+          supabase.from('product_sections').upsert(rows).then(({ error: upsertErr }) => {
+            if (!upsertErr) {
+              fetchAndEmit();
+            } else {
+              console.error("Failed to seed product_sections in Supabase:", upsertErr);
+              if (active) onData(local);
+            }
+          });
+        } else {
+          if (active) onData([]);
+        }
+      }
+    } catch (err) {
+      console.warn("Using offline fallback (sections). Run SQL Schema in Supabase to create 'product_sections' table.", err);
+      if (active) {
+        onData(getLocalSections(userId));
+      }
+    }
+  };
+
+  fetchAndEmit();
+
+  const channel = supabase
+    .channel('realtime-sections-store')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'product_sections' }, () => {
+      fetchAndEmit();
+    })
+    .subscribe();
+
+  const handleStorageChange = () => {
+    fetchAndEmit();
+  };
+  window.addEventListener("local_sections_update", handleStorageChange);
+
+  return () => {
+    active = false;
+    channel.unsubscribe();
+    window.removeEventListener("local_sections_update", handleStorageChange);
+  };
+};
+
+export const storeAddSection = async (
+  userId: string,
+  section: ProductSectionObj
+): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('product_sections')
+      .insert({
+        id: section.id,
+        name: section.name,
+        code: section.code,
+        description: section.description,
+        is_food_or_exempt: section.isFoodOrExempt,
+        created_at: section.createdAt
+      });
+    if (error) throw error;
+  } catch (err) {
+    console.warn("Failed to insert section to Supabase. Updating locally.", err);
+  }
+
+  const list = getLocalSections(userId);
+  list.push(section);
+  saveLocalSections(userId, list);
+  window.dispatchEvent(new Event("local_sections_update"));
+  return Promise.resolve();
+};
+
+export const storeUpdateSection = async (
+  userId: string,
+  sectionId: string,
+  updates: Partial<Omit<ProductSectionObj, 'id' | 'createdAt'>>
+): Promise<void> => {
+  try {
+    const sUpdates: any = {};
+    if (updates.name !== undefined) sUpdates.name = updates.name;
+    if (updates.code !== undefined) sUpdates.code = updates.code;
+    if (updates.description !== undefined) sUpdates.description = updates.description;
+    if (updates.isFoodOrExempt !== undefined) sUpdates.is_food_or_exempt = updates.isFoodOrExempt;
+
+    const { error } = await supabase
+      .from('product_sections')
+      .update(sUpdates)
+      .eq('id', sectionId);
+    if (error) throw error;
+  } catch (err) {
+    console.warn("Failed to update section in Supabase. Syncing locally.", err);
+  }
+
+  const list = getLocalSections(userId);
+  const idx = list.findIndex(s => s.id === sectionId);
+  if (idx !== -1) {
+    list[idx] = { ...list[idx], ...updates };
+    saveLocalSections(userId, list);
+  }
+  window.dispatchEvent(new Event("local_sections_update"));
+  return Promise.resolve();
+};
+
+export const storeDeleteSection = async (
+  userId: string,
+  sectionId: string
+): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('product_sections')
+      .delete()
+      .eq('id', sectionId);
+    if (error) throw error;
+  } catch (err) {
+    console.warn("Failed to delete section from Supabase. Syncing locally.", err);
+  }
+
+  const list = getLocalSections(userId);
+  const updated = list.filter(s => s.id !== sectionId);
+  saveLocalSections(userId, updated);
+  window.dispatchEvent(new Event("local_sections_update"));
   return Promise.resolve();
 };
