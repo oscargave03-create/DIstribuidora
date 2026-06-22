@@ -1172,6 +1172,7 @@ export const subscribeSections = (
       const { data, error } = await supabase
         .from('product_sections')
         .select('*')
+        .eq('user_id', userId)
         .order('name', { ascending: true });
 
       if (error) throw error;
@@ -1199,7 +1200,8 @@ export const subscribeSections = (
             code: s.code,
             description: s.description,
             is_food_or_exempt: s.isFoodOrExempt,
-            created_at: s.createdAt
+            created_at: s.createdAt,
+            user_id: userId
           }));
           supabase.from('product_sections').upsert(rows).then(({ error: upsertErr }) => {
             if (!upsertErr) {
@@ -1225,7 +1227,7 @@ export const subscribeSections = (
 
   const channel = supabase
     .channel('realtime-sections-store')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'product_sections' }, () => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'product_sections', filter: `user_id=eq.${userId}` }, () => {
       fetchAndEmit();
     })
     .subscribe();
@@ -1255,7 +1257,8 @@ export const storeAddSection = async (
         code: section.code,
         description: section.description,
         is_food_or_exempt: section.isFoodOrExempt,
-        created_at: section.createdAt
+        created_at: section.createdAt,
+        user_id: userId
       });
     if (error) throw error;
   } catch (err) {
@@ -1284,7 +1287,8 @@ export const storeUpdateSection = async (
     const { error } = await supabase
       .from('product_sections')
       .update(sUpdates)
-      .eq('id', sectionId);
+      .eq('id', sectionId)
+      .eq('user_id', userId);
     if (error) throw error;
   } catch (err) {
     console.warn("Failed to update section in Supabase. Syncing locally.", err);
@@ -1308,7 +1312,8 @@ export const storeDeleteSection = async (
     const { error } = await supabase
       .from('product_sections')
       .delete()
-      .eq('id', sectionId);
+      .eq('id', sectionId)
+      .eq('user_id', userId);
     if (error) throw error;
   } catch (err) {
     console.warn("Failed to delete section from Supabase. Syncing locally.", err);

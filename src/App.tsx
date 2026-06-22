@@ -245,15 +245,19 @@ export default function App() {
 
   // Real-time sections synchronization hook
   useEffect(() => {
-    const configUserId = user?.uid || 'general-config';
-    const unsubSections = subscribeSections(configUserId, (data) => {
+    if (!user) {
+      setSections([]);
+      return;
+    }
+
+    const unsubSections = subscribeSections(user.uid, (data) => {
       setSections(data);
     });
 
     return () => {
       unsubSections();
     };
-  }, [user?.uid]);
+  }, [user]);
 
   // Real-time permissions synchronization hook
   useEffect(() => {
