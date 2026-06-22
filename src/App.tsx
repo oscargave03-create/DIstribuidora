@@ -906,6 +906,7 @@ export default function App() {
             {activeTab === 'admin' && appConfig && (
               <AdminPanel 
                 config={appConfig}
+                products={products}
                 onUpdateConfig={async (newConfig) => {
                   await storeUpdateConfig(user.uid, newConfig);
                 }}

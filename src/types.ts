@@ -84,6 +84,7 @@ export interface AppConfig {
   isBlocked?: boolean; // Trial/Demo expiration block field
   themeColor?: string; // App primary theme color key (e.g., 'teal', 'blue', 'emerald', etc.)
   themeMode?: 'dark' | 'light' | 'dim'; // 'dark' is default, 'light' is light mode, 'dim' is eye-protection warm-dark
+  sectionsDetail?: ProductSectionObj[]; // Detailed sections/categories for products & food
   taxes: {
     generalRate: number;
     liquorRate: number;
@@ -93,4 +94,14 @@ export interface AppConfig {
     tobaccoName: string;
   };
 }
+
+export interface ProductSectionObj {
+  id: string;
+  name: string;
+  code: string;
+  description: string;
+  isFoodOrExempt: boolean;
+  createdAt: string;
+}
+
 

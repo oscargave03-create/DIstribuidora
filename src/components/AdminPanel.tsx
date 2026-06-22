@@ -34,7 +34,13 @@ import {
   TrendingUp,
   Wrench,
   ShoppingCart,
-  ShieldCheck
+  ShieldCheck,
+  Search,
+  Filter,
+  Calendar,
+  Hash,
+  CheckCircle,
+  HelpCircle
 } from 'lucide-react';
 import { AppConfig, UserPermission } from '../types';
 import { isSupabaseConfigured } from '../supabaseClient';
@@ -46,6 +52,7 @@ interface AdminPanelProps {
   onUpdatePermission: (p: UserPermission) => Promise<void>;
   onDeletePermission: (id: string) => Promise<void>;
   currentUserUid: string;
+  products?: any[]; // Allow optional product tracking list for counting items in table
 }
 
 export default function AdminPanel({
@@ -54,7 +61,8 @@ export default function AdminPanel({
   permissions,
   onUpdatePermission,
   onDeletePermission,
-  currentUserUid
+  currentUserUid,
+  products = []
 }: AdminPanelProps) {
   // Tabs within administration
   const [subTab, setSubTab] = useState<'system' | 'categories' | 'users'>('system');
@@ -107,6 +115,19 @@ export default function AdminPanel({
   const [newCatName, setNewCatName] = useState('');
   const [editingCatIndex, setEditingCatIndex] = useState<number | null>(null);
   const [editingCatVal, setEditingCatVal] = useState('');
+
+  // Detailed Product & Food Sections State
+  const [secName, setSecName] = useState('');
+  const [secCode, setSecCode] = useState('');
+  const [secDescription, setSecDescription] = useState('');
+  const [secIsFoodOrExempt, setSecIsFoodOrExempt] = useState(false);
+  const [secSearchText, setSecSearchText] = useState('');
+  const [secTypeFilter, setSecTypeFilter] = useState<'all' | 'food' | 'general'>('all');
+  const [editingSecId, setEditingSecId] = useState<string | null>(null);
+  const [editingSecName, setEditingSecName] = useState('');
+  const [editingSecCode, setEditingSecCode] = useState('');
+  const [editingSecDescription, setEditingSecDescription] = useState('');
+  const [editingSecIsFood, setEditingSecIsFood] = useState(false);
 
   // User details
   const [showAddUserModal, setShowAddUserModal] = useState(false);
@@ -171,38 +192,212 @@ export default function AdminPanel({
     }
   };
 
-  // Category Add
-  const handleAddCategory = async () => {
-    if (!newCatName.trim()) return;
-    if (config.categories.includes(newCatName.trim())) {
-      alert("La sección ya existe.");
-      return;
-    }
-    const updatedCats = [...config.categories, newCatName.trim()];
-    const updated: AppConfig = { ...config, categories: updatedCats };
-    await onUpdateConfig(updated);
-    setNewCatName('');
+  // Helper to ensure isFood or general properties are saved synced with categories
+  const getSectionsList = (): any[] => {
+    const details = config.sectionsDetail || [];
+    const detailsMap = new Map(details.map(d => [d.name, d]));
+    const syncedList: any[] = [];
+    
+    config.categories.forEach((cat, idx) => {
+      if (detailsMap.has(cat)) {
+        syncedList.push(detailsMap.get(cat)!);
+      } else {
+        const isFood = cat.toLowerCase().includes('abarrote') || 
+                       cat.toLowerCase().includes('lácteo') || 
+                       cat.toLowerCase().includes('lacteo') || 
+                       cat.toLowerCase().includes('conserva') || 
+                       cat.toLowerCase().includes('enlatado') || 
+                       cat.toLowerCase().includes('panader') || 
+                       cat.toLowerCase().includes('pan') || 
+                       cat.toLowerCase().includes('alimento') || 
+                       cat.toLowerCase().includes('bebida') ||
+                       cat.toLowerCase().includes('fruta') ||
+                       cat.toLowerCase().includes('verdura') ||
+                       cat.toLowerCase().includes('comida');
+        let code = cat.slice(0, 3).toUpperCase().replace(/\s/g, '');
+        if (code.length < 2) code = cat.toUpperCase() + 'X';
+        syncedList.push({
+          id: `sec-${idx + 1}-${Date.now() % 1000000}`,
+          name: cat,
+          code: code,
+          description: `Sección destinada a la clasificación y almacenamiento de ${cat.toLowerCase()}`,
+          isFoodOrExempt: isFood,
+          createdAt: new Date().toISOString()
+        });
+      }
+    });
+    return syncedList;
   };
 
-  // Category Delete
-  const handleDeleteCategory = async (catName: string) => {
-    if (config.categories.length <= 1) {
-      alert("Debe haber por lo menos una sección/categoría.");
+  // Create Section
+  const handleCreateDetailedSection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!secName.trim()) {
+      alert("Por favor ingrese el nombre de la sección.");
       return;
     }
-    if (confirm(`¿Dar de baja la sección "${catName}"? Los productos de esta sección seguirán existiendo, pero se quedarán sin la categoría activa.`)) {
-      const updatedCats = config.categories.filter(c => c !== catName);
-      const updated: AppConfig = { ...config, categories: updatedCats };
+    const cleanName = secName.trim();
+    if (config.categories.includes(cleanName)) {
+      alert("Esta sección ya existe en el sistema.");
+      return;
+    }
+
+    const cleanCode = (secCode.trim() || cleanName.slice(0, 3).toUpperCase()).toUpperCase();
+    const currentSections = getSectionsList();
+
+    const newSecObj = {
+      id: `sec-${Date.now()}`,
+      name: cleanName,
+      code: cleanCode,
+      description: secDescription.trim() || `Sección especializada en ${cleanName}`,
+      isFoodOrExempt: secIsFoodOrExempt,
+      createdAt: new Date().toISOString()
+    };
+
+    const updatedCategories = [...config.categories, cleanName];
+    const updatedDetails = [...currentSections, newSecObj];
+
+    const updated: AppConfig = {
+      ...config,
+      categories: updatedCategories,
+      sectionsDetail: updatedDetails
+    };
+
+    await onUpdateConfig(updated);
+
+    // Reset Form
+    setSecName('');
+    setSecCode('');
+    setSecDescription('');
+    setSecIsFoodOrExempt(false);
+  };
+
+  // Delete Section Detail
+  const handleDeleteDetailedSection = async (secId: string, name: string) => {
+    if (config.categories.length <= 1) {
+      alert("Debe haber por lo menos una sección/categoría autorizada.");
+      return;
+    }
+
+    // Check if there are active products using this category in the warehouse
+    const productsInCat = products.filter(p => p.category === name);
+    const count = productsInCat.length;
+
+    let confirmMsg = `¿Dar de baja la sección "${name}"?`;
+    if (count > 0) {
+      confirmMsg += ` ADVERTENCIA: Hay ${count} producto(s) asignado(s) a esta sección. Si la eliminas, estos productos continuarán registrados pero quedarán categorizados provisionalmente sin sección asignada.`;
+    }
+
+    if (confirm(confirmMsg)) {
+      const currentSections = getSectionsList();
+      const updatedCategories = config.categories.filter(c => c !== name);
+      const updatedDetails = currentSections.filter(s => s.id !== secId && s.name !== name);
+
+      const updated: AppConfig = {
+        ...config,
+        categories: updatedCategories,
+        sectionsDetail: updatedDetails
+      };
+
       await onUpdateConfig(updated);
     }
   };
 
-  // Save renamed Category
+  // Trigger inline or modal edit setup
+  const startEditSection = (sec: any) => {
+    setEditingSecId(sec.id);
+    setEditingSecName(sec.name);
+    setEditingSecCode(sec.code);
+    setEditingSecDescription(sec.description);
+    setEditingSecIsFood(sec.isFoodOrExempt);
+  };
+
+  // Save changes for edited section
+  const handleSaveEditSection = async () => {
+    if (!editingSecName.trim()) {
+      alert("El nombre de la sección no puede estar vacío.");
+      return;
+    }
+    const cleanName = editingSecName.trim();
+    const currentSections = getSectionsList();
+    const editingSec = currentSections.find(s => s.id === editingSecId);
+    if (!editingSec) return;
+
+    // Check if renamed to something already existing (and it is not itself)
+    if (cleanName !== editingSec.name && config.categories.includes(cleanName)) {
+      alert("Ya existe otra sección con ese nombre.");
+      return;
+    }
+
+    const updatedCats = config.categories.map(c => c === editingSec.name ? cleanName : c);
+    const updatedDetails = currentSections.map(s => {
+      if (s.id === editingSecId) {
+        return {
+          ...s,
+          name: cleanName,
+          code: (editingSecCode.trim() || cleanName.slice(0, 3).toUpperCase()).toUpperCase(),
+          description: editingSecDescription.trim(),
+          isFoodOrExempt: editingSecIsFood
+        };
+      }
+      return s;
+    });
+
+    const updated: AppConfig = {
+      ...config,
+      categories: updatedCats,
+      sectionsDetail: updatedDetails
+    };
+
+    await onUpdateConfig(updated);
+    setEditingSecId(null);
+  };
+
+  // Legacy Compatibility Placeholders
+  const handleAddCategory = async () => {
+    // Falls back to detailed create format
+    setSecName(newCatName);
+    setSecCode('');
+    setSecDescription(`Sección de ${newCatName.trim()}`);
+    setSecIsFoodOrExempt(false);
+    
+    const cleanName = newCatName.trim();
+    if (!cleanName) return;
+    const cleanCode = cleanName.slice(0, 3).toUpperCase();
+    const currentSections = getSectionsList();
+    const newSecObj = {
+      id: `sec-${Date.now()}`,
+      name: cleanName,
+      code: cleanCode,
+      description: `Sección de ${cleanName}`,
+      isFoodOrExempt: false,
+      createdAt: new Date().toISOString()
+    };
+    const updatedCategories = [...config.categories, cleanName];
+    const updatedDetails = [...currentSections, newSecObj];
+    const updated = { ...config, categories: updatedCategories, sectionsDetail: updatedDetails };
+    await onUpdateConfig(updated);
+    setNewCatName('');
+  };
+
+  const handleDeleteCategory = async (catName: string) => {
+    await handleDeleteDetailedSection('', catName);
+  };
+
   const handleSaveRenameCategory = async (index: number) => {
     if (!editingCatVal.trim()) return;
+    const oldName = config.categories[index];
+    const cleanName = editingCatVal.trim();
+    const currentSections = getSectionsList();
     const updatedCats = [...config.categories];
-    updatedCats[index] = editingCatVal.trim();
-    const updated: AppConfig = { ...config, categories: updatedCats };
+    updatedCats[index] = cleanName;
+    const updatedDetails = currentSections.map(s => {
+      if (s.name === oldName) {
+        return { ...s, name: cleanName };
+      }
+      return s;
+    });
+    const updated = { ...config, categories: updatedCats, sectionsDetail: updatedDetails };
     await onUpdateConfig(updated);
     setEditingCatIndex(null);
   };
@@ -1331,109 +1526,340 @@ export default function AdminPanel({
           )}
 
           {/* ==================== SUB-TAB 2: SECTIONS / CATEGORIES ==================== */}
-          {subTab === 'categories' && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-sm font-bold text-slate-200 border-b border-slate-800 pb-2 mb-4 uppercase tracking-wider flex items-center gap-1.5">
-                  <Layers className="w-4 h-4 text-teal-400" /> Creación y Personalización de Secciones
-                </h3>
-                <p className="text-xs text-slate-400 mb-6 max-w-xl">
-                  Crea las secciones o pasillos lógicos de clasificación para tu catálogo de productos. Al editar una sección, todos los formularios de alta de stock se actualizarán al instante.
-                </p>
-              </div>
-
-              {/* Add category field */}
-              <div className="bg-slate-950 p-5 rounded-2xl border border-slate-850 max-w-lg space-y-3">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Añadir Nueva Sección</span>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newCatName}
-                    onChange={(e) => setNewCatName(e.target.value)}
-                    placeholder="Ej. Panadería, Bebidas Heladas, Limpieza..."
-                    className="flex-1 bg-slate-905 border border-slate-800 rounded-xl px-4 py-2 text-xs text-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddCategory}
-                    className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold rounded-xl transition cursor-pointer flex items-center gap-1"
-                  >
-                    <Plus className="w-4 h-4" /> Agregar
-                  </button>
-                </div>
-              </div>
-
-              {/* Grid of existing categories */}
-              <div className="space-y-3">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Secciones Activas ({config.categories.length})</span>
+          {subTab === 'categories' && (() => {
+            const allSections = getSectionsList();
+            
+            // Apply Search & Filter
+            const filteredSections = allSections.filter(sec => {
+              const matchesSearch = 
+                sec.name.toLowerCase().includes(secSearchText.toLowerCase()) ||
+                sec.code.toLowerCase().includes(secSearchText.toLowerCase()) ||
+                sec.description.toLowerCase().includes(secSearchText.toLowerCase());
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {config.categories.map((cat, idx) => {
-                    const isEditing = editingCatIndex === idx;
+              if (secTypeFilter === 'food') {
+                return matchesSearch && sec.isFoodOrExempt;
+              }
+              if (secTypeFilter === 'general') {
+                return matchesSearch && !sec.isFoodOrExempt;
+              }
+              return matchesSearch;
+            });
 
-                    return (
-                      <div 
-                        key={idx}
-                        className="p-3 bg-slate-950 border border-slate-850 rounded-2xl flex items-center justify-between gap-3"
-                      >
-                        {isEditing ? (
-                          <div className="flex-1 flex gap-1.5">
-                            <input
-                              type="text"
-                              value={editingCatVal}
-                              onChange={(e) => setEditingCatVal(e.target.value)}
-                              className="flex-1 bg-slate-900 border border-teal-500/50 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none"
-                              autoFocus
-                            />
-                            <button
-                              onClick={() => handleSaveRenameCategory(idx)}
-                              className="p-1 bg-teal-550/20 text-teal-400 border border-teal-500/20 rounded-md hover:bg-teal-500 hover:text-white transition cursor-pointer"
-                              title="Salvar cambio"
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => setEditingCatIndex(null)}
-                              className="p-1 text-slate-400 hover:text-white"
-                            >
-                              ✕
-                            </button>
+            const foodCount = allSections.filter(s => s.isFoodOrExempt).length;
+            const generalCount = allSections.filter(s => !s.isFoodOrExempt).length;
+
+            const getProductsCountForCategory = (categoryName: string): number => {
+              return products.filter(p => p.category === categoryName).length;
+            };
+
+            return (
+              <div className="space-y-6">
+                {/* HEADER DESCRIPTIVE */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-850 pb-5">
+                  <div>
+                    <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <Layers className="w-5 h-5 text-teal-400" /> Registro de Secciones de Productos y Alimentos
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1 max-w-xl leading-relaxed">
+                      Configure las áreas de distribución y catalogación del establecimiento. La asignación del de tipo determina si los lotes pertenecen a Alimentos Exentos o a Mercadería con IVA General.
+                    </p>
+                  </div>
+                  
+                  {/* STATS CHIPS GRID */}
+                  <div className="flex flex-wrap gap-2 md:self-end">
+                    <div className="bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-850 flex items-center gap-2">
+                      <Layers className="w-3.5 h-3.5 text-teal-400" />
+                      <span className="text-[10px] font-mono text-slate-400 uppercase">Secciones: <strong className="text-white">{allSections.length}</strong></span>
+                    </div>
+                    <div className="bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-850 flex items-center gap-2">
+                      <Coffee className="w-3.5 h-3.5 text-emerald-450" />
+                      <span className="text-[10px] font-mono text-emerald-450 uppercase">Alimentos: <strong className="text-white">{foodCount}</strong></span>
+                    </div>
+                    <div className="bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-850 flex items-center gap-2">
+                      <Package className="w-3.5 h-3.5 text-blue-400" />
+                      <span className="text-[10px] font-mono text-blue-400 uppercase">General: <strong className="text-white">{generalCount}</strong></span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
+                  {/* COLUMN 1: EDIT / CREATE PANEL CONTAINER */}
+                  <div className="bg-slate-950/60 p-5 rounded-2xl border border-slate-850 space-y-4">
+                    <div className="border-b border-slate-850 pb-2 flex items-center justify-between">
+                      <span className="text-[10px] font-black text-teal-450 uppercase tracking-widest flex items-center gap-1.5">
+                        {editingSecId ? (
+                          <>🔧 Modificar sección</>
+                        ) : (
+                          <>📝 Registrar nueva sección</>
+                        )}
+                      </span>
+                      {editingSecId && (
+                        <button 
+                          type="button"
+                          onClick={() => setEditingSecId(null)}
+                          className="text-[10px] text-rose-450 font-bold hover:underline cursor-pointer"
+                        >
+                          Cancelar edición
+                        </button>
+                      )}
+                    </div>
+
+                    <form onSubmit={(e) => {
+                      if (editingSecId) {
+                        e.preventDefault();
+                        handleSaveEditSection();
+                      } else {
+                        handleCreateDetailedSection(e);
+                      }
+                    }} className="space-y-4">
+                      {/* Form Fields */}
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Nombre de la Sección *</label>
+                        <input
+                          type="text"
+                          value={editingSecId ? editingSecName : secName}
+                          onChange={(e) => editingSecId ? setEditingSecName(e.target.value) : setSecName(e.target.value)}
+                          placeholder="Ej. Lacteos y Quesos, Bebidas Heladas..."
+                          required
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-teal-500/50"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="col-span-1 space-y-1.5">
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block" title="Identificador de 2 o 3 letras">Código *</label>
+                          <input
+                            type="text"
+                            maxLength={5}
+                            placeholder="EX: LA"
+                            value={editingSecId ? editingSecCode : secCode}
+                            onChange={(e) => editingSecId ? setEditingSecCode(e.target.value.toUpperCase()) : setSecCode(e.target.value.toUpperCase())}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono text-center placeholder:text-slate-600 focus:outline-none focus:border-teal-500/50"
+                          />
+                        </div>
+                        <div className="col-span-2 space-y-1.5">
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Clasificación de Sección</label>
+                          <div 
+                            onClick={() => editingSecId ? setEditingSecIsFood(!editingSecIsFood) : setSecIsFoodOrExempt(!secIsFoodOrExempt)}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs cursor-pointer select-none transition ${
+                              (editingSecId ? editingSecIsFood : secIsFoodOrExempt)
+                                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 font-bold'
+                                : 'bg-slate-900 border-slate-800 text-slate-400'
+                            }`}
+                          >
+                            <Coffee className={`w-4 h-4 shrink-0 transition ${
+                              (editingSecId ? editingSecIsFood : secIsFoodOrExempt) ? 'rotate-12 scale-110' : ''
+                            }`} />
+                            <span className="text-[9px] uppercase tracking-wider">¿Es Alimento?</span>
                           </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Descripción / Detalles de Distribución</label>
+                        <textarea
+                          rows={3}
+                          value={editingSecId ? editingSecDescription : secDescription}
+                          onChange={(e) => editingSecId ? setEditingSecDescription(e.target.value) : setSecDescription(e.target.value)}
+                          placeholder="Indique pasillos físicos, refrigeración requerida o notas comerciales sobre esta sección..."
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-teal-500/50 resize-none"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        className={`w-full py-2.5 rounded-xl font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                          editingSecId
+                            ? 'bg-amber-500 text-slate-950 hover:bg-amber-400'
+                            : 'bg-teal-600 hover:bg-teal-500 text-white shadow-lg shadow-teal-500/5'
+                        }`}
+                      >
+                        {editingSecId ? (
+                          <>🔧 Aplicar Modificaciones</>
                         ) : (
                           <>
-                            <div className="flex items-center gap-2">
-                              <div className="w-2.5 h-2.5 bg-teal-500/30 rounded-full" />
-                              <span className="text-xs font-semibold text-slate-200">{cat}</span>
-                            </div>
-                            
-                            <div className="flex items-center gap-1.5">
-                              <button
-                                onClick={() => {
-                                  setEditingCatIndex(idx);
-                                  setEditingCatVal(cat);
-                                }}
-                                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-900 rounded-lg transition cursor-pointer"
-                                title="Renombrar sección"
-                              >
-                                <Edit2 className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteCategory(cat)}
-                                className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition cursor-pointer"
-                                title="Eliminar sección"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
+                            <Plus className="w-4 h-4" /> Registrar Sección
                           </>
                         )}
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* COLUMN 2 & 3: MAIN DATA TABLE */}
+                  <div className="xl:col-span-2 space-y-4">
+                    <div className="bg-slate-950 p-4 rounded-2xl border border-slate-850 flex flex-col md:flex-row gap-3 items-center justify-between">
+                      {/* Search */}
+                      <div className="relative w-full md:max-w-xs">
+                        <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          placeholder="Buscar sección por nombre, código..."
+                          value={secSearchText}
+                          onChange={(e) => setSecSearchText(e.target.value)}
+                          className="w-full bg-slate-900/80 hover:bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-8 py-1.5 text-xs text-white focus:outline-none focus:border-teal-500/50"
+                        />
+                        {secSearchText && (
+                          <button
+                            onClick={() => setSecSearchText('')}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white text-xs cursor-pointer"
+                          >
+                            ✕
+                          </button>
+                        )}
                       </div>
-                    );
-                  })}
+
+                      {/* Filters */}
+                      <div className="flex gap-1 overflow-x-auto self-stretch md:self-auto pb-1 md:pb-0 shrink-0">
+                        {[
+                          { id: 'all', label: 'Ver Todo', icon: Layers },
+                          { id: 'food', label: 'Alimentos / Exentos', icon: Coffee },
+                          { id: 'general', label: 'Mercadería General', icon: Package }
+                        ].map((pill) => {
+                          const PillIcon = pill.icon;
+                          const isSelected = secTypeFilter === pill.id;
+                          return (
+                            <button
+                              key={pill.id}
+                              onClick={() => setSecTypeFilter(pill.id as any)}
+                              className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition border cursor-pointer shrink-0 ${
+                                isSelected
+                                  ? 'bg-teal-500/10 border-teal-500/30 text-teal-400 font-black'
+                                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                              }`}
+                            >
+                              <PillIcon className="w-3.5 h-3.5" />
+                              {pill.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* TABLE CONTAINER */}
+                    <div className="bg-slate-950 rounded-2xl border border-slate-850 overflow-hidden shadow-2xl">
+                      <div className="overflow-x-auto max-h-[500px]">
+                        <table className="w-full text-left border-collapse table-auto md:table-fixed">
+                          <thead>
+                            <tr className="bg-slate-900/60 border-b border-slate-850 text-[10px] font-black text-slate-450 tracking-widest uppercase">
+                              <th className="py-3.5 px-4 w-20 text-center">Código</th>
+                              <th className="py-3.5 px-4">Nombre de Sección / Productos</th>
+                              <th className="py-3.5 px-4 hidden sm:table-cell">Clasificación tributaria</th>
+                              <th className="py-3.5 px-4 w-1/3">Ubicación / Detalles</th>
+                              <th className="py-3.5 px-4 w-24 text-right">Acciones</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-850/60 text-xs">
+                            {filteredSections.length === 0 ? (
+                              <tr>
+                                <td colSpan={5} className="py-12 px-4 text-center text-slate-500">
+                                  <CheckSquare className="w-8 h-8 text-slate-700 mx-auto mb-2 opacity-50" />
+                                  <p className="text-xs font-bold text-slate-400">No se encontraron secciones registradas</p>
+                                  <p className="text-[10px] text-slate-600 mt-1">Modifique los filtros o registre una sección en el panel lateral.</p>
+                                </td>
+                              </tr>
+                            ) : (
+                              filteredSections.map((sec) => {
+                                const itemCount = getProductsCountForCategory(sec.name);
+                                const isEditingRaw = editingSecId === sec.id;
+                                
+                                return (
+                                  <tr 
+                                    key={sec.id}
+                                    className={`hover:bg-slate-900/40 transition-colors group ${
+                                      isEditingRaw ? 'bg-amber-500/5' : ''
+                                    }`}
+                                  >
+                                    {/* Code */}
+                                    <td className="py-3 px-4 text-center font-mono font-black">
+                                      <span className={`px-2 py-1.5 rounded-lg border text-[10px] inline-block shadow-sm ${
+                                        sec.isFoodOrExempt 
+                                          ? 'bg-emerald-500/10 border-emerald-555/20 text-emerald-455' 
+                                          : 'bg-slate-905 border-slate-800 text-slate-300'
+                                      }`}>
+                                        [{sec.code}]
+                                      </span>
+                                    </td>
+
+                                    {/* Name / Product count */}
+                                    <td className="py-3 px-4">
+                                      <div>
+                                        <p className="font-bold text-slate-200 block truncate">{sec.name}</p>
+                                        <span className={`text-[9px] font-mono font-medium block mt-0.5 rounded-full px-2 py-0.5 max-w-max ${
+                                          itemCount > 0 
+                                            ? 'bg-slate-900 text-slate-400' 
+                                            : 'bg-slate-900/40 text-slate-600'
+                                        }`}>
+                                          {itemCount} productos en stock
+                                        </span>
+                                      </div>
+                                    </td>
+
+                                    {/* Classification Badge */}
+                                    <td className="py-3 px-4 hidden sm:table-cell">
+                                      {sec.isFoodOrExempt ? (
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-[9px] font-black uppercase tracking-wider border border-emerald-500/10">
+                                          <Coffee className="w-3 h-3 text-emerald-450" />
+                                          Alimento (IVA 0%)
+                                        </span>
+                                      ) : (
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-900 text-slate-500 rounded-full text-[9px] font-black uppercase tracking-wider border border-slate-800">
+                                          <Package className="w-3 h-3 text-slate-650" />
+                                          General (Con IVA)
+                                        </span>
+                                      )}
+                                    </td>
+
+                                    {/* Description */}
+                                    <td className="py-3 px-4">
+                                      <p className="text-[11px] text-slate-450 line-clamp-2 leading-relaxed" title={sec.description}>
+                                        {sec.description || "Sin descripción detallada registrada."}
+                                      </p>
+                                    </td>
+
+                                    {/* Actions */}
+                                    <td className="py-3 px-4 text-right">
+                                      <div className="flex items-center justify-end gap-1.5 opacity-90 group-hover:opacity-100 transition">
+                                        <button
+                                          type="button"
+                                          onClick={() => startEditSection(sec)}
+                                          className={`p-1.5 rounded-lg border text-xs cursor-pointer transition ${
+                                            isEditingRaw
+                                              ? 'bg-amber-550/20 border-amber-500/30 text-amber-400'
+                                              : 'bg-slate-900 border-slate-800 hover:border-slate-700 text-slate-450 hover:text-white'
+                                          }`}
+                                          title="Editar Sección"
+                                        >
+                                          <Edit2 className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDeleteDetailedSection(sec.id, sec.name)}
+                                          className="p-1.5 bg-slate-900 border border-slate-800 hover:border-rose-900/30 text-slate-450 hover:text-rose-450 rounded-lg transition overflow-hidden cursor-pointer"
+                                          title="Dar de baja sección"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                      
+                      {/* Table Footer counts */}
+                      <div className="p-3 bg-slate-900/50 border-t border-slate-850 px-4 flex items-center justify-between text-[10px] text-slate-500 font-mono">
+                        <span>Secciones mostradas: {filteredSections.length} de {allSections.length}</span>
+                        <span>Ordenado por fecha de alta</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* ==================== SUB-TAB 3: USERS & PERMISSIONS ==================== */}
           {subTab === 'users' && (
