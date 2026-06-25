@@ -68,7 +68,7 @@ import {
 } from './db/store';
 import { isConfigured } from './firebase';
 import { isSupabaseConfigured } from './supabaseClient';
-import { Product, StockHistory, UserSession, AppConfig, UserPermission, ProductSectionObj } from './types';
+import { Product, StockHistory, UserSession, AppConfig, UserPermission, ProductSectionObj, Sale } from './types';
 
 // Page views
 import LoginView from './components/LoginView';
@@ -90,6 +90,7 @@ export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [history, setHistory] = useState<StockHistory[]>([]);
   const [sections, setSections] = useState<ProductSectionObj[]>([]);
+  const [sales, setSales] = useState<Sale[]>([]);
 
   // Config and permissions lists
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
@@ -258,6 +259,30 @@ export default function App() {
 
     return () => {
       unsubSections();
+    };
+  }, [user]);
+
+  // Real-time sales loading and event synchronization hook
+  useEffect(() => {
+    if (!user) {
+      setSales([]);
+      return;
+    }
+
+    const loadSalesData = async () => {
+      try {
+        const data = await storeLoadSales(user.uid);
+        setSales(data);
+      } catch (err) {
+        console.error("Error loading sales:", err);
+      }
+    };
+
+    loadSalesData();
+
+    window.addEventListener("local_sales_update", loadSalesData);
+    return () => {
+      window.removeEventListener("local_sales_update", loadSalesData);
     };
   }, [user]);
 
@@ -932,6 +957,7 @@ export default function App() {
               <ReportsView 
                 products={products}
                 history={history}
+                sales={sales}
                 config={appConfig || undefined}
               />
             )}
