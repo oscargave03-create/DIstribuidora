@@ -50,6 +50,17 @@ CREATE TABLE IF NOT EXISTS stock_history (
     timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- 5. Tabla de Secciones / Categorías Especiales de Productos
+CREATE TABLE IF NOT EXISTS product_sections (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    code TEXT,
+    description TEXT,
+    is_food_or_exempt BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    user_id TEXT NOT NULL
+);
+
 -- ====================================================================
 -- CONTROL DE ACCESO TOTAL (DESHABILITAR RLS PARA GARANTIZAR ESCRITURA DIRECTA)
 -- Al deshabilitar RLS, la clave pública (anon key) tiene permisos completos
@@ -60,6 +71,7 @@ ALTER TABLE app_config DISABLE ROW LEVEL SECURITY;
 ALTER TABLE user_permissions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE products DISABLE ROW LEVEL SECURITY;
 ALTER TABLE stock_history DISABLE ROW LEVEL SECURITY;
+ALTER TABLE product_sections DISABLE ROW LEVEL SECURITY;
 
 -- ====================================================================
 -- INSERCIÓN DE DATOS POR DEFECTO PARA EL INICIO DE SESIÓN
