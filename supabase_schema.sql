@@ -61,6 +61,35 @@ CREATE TABLE IF NOT EXISTS product_sections (
     user_id TEXT NOT NULL
 );
 
+-- 6. Tabla de Ventas (Cabecera de Transacción)
+CREATE TABLE IF NOT EXISTS sales (
+    id TEXT PRIMARY KEY,
+    ticket_id TEXT NOT NULL,
+    client_name TEXT NOT NULL,
+    payment_method TEXT NOT NULL,
+    subtotal NUMERIC NOT NULL DEFAULT 0,
+    tax_general NUMERIC NOT NULL DEFAULT 0,
+    tax_liquor NUMERIC NOT NULL DEFAULT 0,
+    tax_tobacco NUMERIC NOT NULL DEFAULT 0,
+    total_tax NUMERIC NOT NULL DEFAULT 0,
+    total NUMERIC NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    user_id TEXT NOT NULL,
+    user_name TEXT NOT NULL
+);
+
+-- 7. Tabla de Detalles de Ventas (Productos de cada Transacción)
+CREATE TABLE IF NOT EXISTS sale_items (
+    id TEXT PRIMARY KEY,
+    sale_id TEXT NOT NULL,
+    product_id TEXT NOT NULL,
+    product_name TEXT NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 0,
+    price_unit NUMERIC NOT NULL DEFAULT 0,
+    subtotal NUMERIC NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- ====================================================================
 -- CONTROL DE ACCESO TOTAL (DESHABILITAR RLS PARA GARANTIZAR ESCRITURA DIRECTA)
 -- Al deshabilitar RLS, la clave pública (anon key) tiene permisos completos
@@ -72,6 +101,8 @@ ALTER TABLE user_permissions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE products DISABLE ROW LEVEL SECURITY;
 ALTER TABLE stock_history DISABLE ROW LEVEL SECURITY;
 ALTER TABLE product_sections DISABLE ROW LEVEL SECURITY;
+ALTER TABLE sales DISABLE ROW LEVEL SECURITY;
+ALTER TABLE sale_items DISABLE ROW LEVEL SECURITY;
 
 -- ====================================================================
 -- INSERCIÓN DE DATOS POR DEFECTO PARA EL INICIO DE SESIÓN

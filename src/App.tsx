@@ -62,7 +62,9 @@ import {
   subscribeSections,
   storeAddSection,
   storeUpdateSection,
-  storeDeleteSection
+  storeDeleteSection,
+  storeAddSale,
+  storeLoadSales
 } from './db/store';
 import { isConfigured } from './firebase';
 import { isSupabaseConfigured } from './supabaseClient';
@@ -908,6 +910,11 @@ export default function App() {
                 products={products}
                 onSellProduct={async (prodId, newQty, reason) => {
                   await handleQuickAdjustConfirm(prodId, { quantity: newQty }, reason);
+                }}
+                onRegisterSale={async (saleData) => {
+                  if (user) {
+                    await storeAddSale(user.uid, user.displayName, saleData);
+                  }
                 }}
                 config={appConfig || undefined}
                 allowedActions={activeAllowedActions}

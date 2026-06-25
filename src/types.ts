@@ -104,4 +104,33 @@ export interface ProductSectionObj {
   createdAt: string;
 }
 
+export interface Sale {
+  id: string;
+  ticketId: string;
+  clientName: string;
+  paymentMethod: string;
+  subtotal: number;
+  taxGeneral: number;
+  taxLiquor: number;
+  taxTobacco: number;
+  totalTax: number;
+  total: number;
+  createdAt: string; // ISO string
+  userId: string;
+  userName: string;
+  items?: SaleItem[];
+}
+
+export interface SaleItem {
+  id: string;
+  saleId: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  priceUnit: number;
+  subtotal: number;
+  createdAt: string; // ISO string
+}
+
+
 

@@ -1,4 +1,4 @@
-import { Product, StockHistory, UserSession, AppConfig, UserPermission, ProductSectionObj } from '../types';
+import { Product, StockHistory, UserSession, AppConfig, UserPermission, ProductSectionObj, Sale, SaleItem } from '../types';
 import { supabase } from '../supabaseClient';
 
 export enum OperationType {
@@ -1332,3 +1332,179 @@ export const storeDeleteSection = async (
   window.dispatchEvent(new Event("local_sections_update"));
   return Promise.resolve();
 };
+
+// Sales / Ventas Persistence API
+
+const getLocalSales = (userId: string): Sale[] => {
+  const data = localStorage.getItem(`inv_sales_${userId}`);
+  return data ? JSON.parse(data) : [];
+};
+
+const saveLocalSales = (userId: string, sales: Sale[]) => {
+  localStorage.setItem(`inv_sales_${userId}`, JSON.stringify(sales));
+};
+
+export const storeAddSale = async (
+  userId: string,
+  userName: string,
+  saleData: {
+    ticketId: string;
+    clientName: string;
+    paymentMethod: string;
+    subtotal: number;
+    taxGeneral: number;
+    taxLiquor: number;
+    taxTobacco: number;
+    totalTax: number;
+    total: number;
+    items: {
+      productId: string;
+      productName: string;
+      quantity: number;
+      priceUnit: number;
+      subtotal: number;
+    }[];
+  }
+): Promise<void> => {
+  const now = new Date().toISOString();
+  const saleId = "sale-" + Math.floor(Math.random() * 9000000 + 1000000);
+
+  // 1. Try sending to Supabase
+  try {
+    // Insert into sales table
+    const { error: saleErr } = await supabase
+      .from('sales')
+      .insert({
+        id: saleId,
+        ticket_id: saleData.ticketId,
+        client_name: saleData.clientName,
+        payment_method: saleData.paymentMethod,
+        subtotal: saleData.subtotal,
+        tax_general: saleData.taxGeneral,
+        tax_liquor: saleData.taxLiquor,
+        tax_tobacco: saleData.taxTobacco,
+        total_tax: saleData.totalTax,
+        total: saleData.total,
+        created_at: now,
+        user_id: userId,
+        user_name: userName
+      });
+
+    if (saleErr) throw saleErr;
+
+    // Insert all items into sale_items table
+    const dbItems = saleData.items.map((item, idx) => ({
+      id: `item-${saleId}-${idx}`,
+      sale_id: saleId,
+      product_id: item.productId,
+      product_name: item.productName,
+      quantity: item.quantity,
+      price_unit: item.priceUnit,
+      subtotal: item.subtotal,
+      created_at: now
+    }));
+
+    const { error: itemsErr } = await supabase
+      .from('sale_items')
+      .insert(dbItems);
+
+    if (itemsErr) throw itemsErr;
+
+  } catch (err) {
+    console.warn("Failed to register sale in Supabase database. Saving to offline storage...", err);
+  }
+
+  // 2. Save locally for offline and fast loading
+  const localSales = getLocalSales(userId);
+  const newSale: Sale = {
+    id: saleId,
+    ticketId: saleData.ticketId,
+    clientName: saleData.clientName,
+    paymentMethod: saleData.paymentMethod,
+    subtotal: saleData.subtotal,
+    taxGeneral: saleData.taxGeneral,
+    taxLiquor: saleData.taxLiquor,
+    taxTobacco: saleData.taxTobacco,
+    totalTax: saleData.totalTax,
+    total: saleData.total,
+    createdAt: now,
+    userId: userId,
+    userName: userName,
+    items: saleData.items.map((item, idx) => ({
+      id: `item-${saleId}-${idx}`,
+      saleId: saleId,
+      productId: item.productId,
+      productName: item.productName,
+      quantity: item.quantity,
+      priceUnit: item.priceUnit,
+      subtotal: item.subtotal,
+      createdAt: now
+    }))
+  };
+
+  localSales.unshift(newSale);
+  saveLocalSales(userId, localSales);
+
+  // Dispatch an event to notify of sales update
+  window.dispatchEvent(new Event("local_sales_update"));
+  return Promise.resolve();
+};
+
+export const storeLoadSales = async (userId: string): Promise<Sale[]> => {
+  try {
+    const { data: salesData, error: salesErr } = await supabase
+      .from('sales')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (salesErr) throw salesErr;
+
+    const { data: itemsData, error: itemsErr } = await supabase
+      .from('sale_items')
+      .select('*');
+
+    if (itemsErr) throw itemsErr;
+
+    if (salesData) {
+      const mapped: Sale[] = salesData.map(s => {
+        const matchingItems = (itemsData || [])
+          .filter(item => item.sale_id === s.id)
+          .map(item => ({
+            id: item.id,
+            saleId: item.sale_id,
+            productId: item.product_id,
+            productName: item.product_name,
+            quantity: item.quantity,
+            priceUnit: item.price_unit,
+            subtotal: item.subtotal,
+            createdAt: item.created_at
+          }));
+
+        return {
+          id: s.id,
+          ticketId: s.ticket_id,
+          clientName: s.client_name,
+          paymentMethod: s.payment_method,
+          subtotal: s.subtotal,
+          taxGeneral: s.tax_general,
+          taxLiquor: s.tax_liquor,
+          taxTobacco: s.tax_tobacco,
+          totalTax: s.total_tax,
+          total: s.total,
+          createdAt: s.created_at,
+          userId: s.user_id,
+          userName: s.user_name,
+          items: matchingItems
+        };
+      });
+
+      saveLocalSales(userId, mapped);
+      return mapped;
+    }
+  } catch (err) {
+    console.warn("Could not load sales from database. Falling back to offline local storage.", err);
+  }
+
+  return getLocalSales(userId);
+};
+

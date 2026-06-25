@@ -25,6 +25,26 @@ interface PointOfSaleViewProps {
     newQty: number, 
     adjustReason: { changeAmount: number, notes: string }
   ) => Promise<void>;
+  onRegisterSale?: (
+    saleData: {
+      ticketId: string;
+      clientName: string;
+      paymentMethod: string;
+      subtotal: number;
+      taxGeneral: number;
+      taxLiquor: number;
+      taxTobacco: number;
+      totalTax: number;
+      total: number;
+      items: {
+        productId: string;
+        productName: string;
+        quantity: number;
+        priceUnit: number;
+        subtotal: number;
+      }[];
+    }
+  ) => Promise<void>;
   config?: AppConfig;
   allowedActions?: {
     create_product: boolean;
@@ -79,6 +99,7 @@ function isFoodOrProductExempt(category: string, name: string): boolean {
 export default function PointOfSaleView({ 
   products, 
   onSellProduct,
+  onRegisterSale,
   config,
   allowedActions = { create_product: true, edit_product: true, delete_product: true, adjust_stock: true, process_sale: true }
 }: PointOfSaleViewProps) {
@@ -233,6 +254,28 @@ export default function PointOfSaleView({
         const notes = `Venta en Caja POS ${ticketId} [${paymentMethod}] - Entregado a: ${currentClient}`;
 
         await onSellProduct(item.product.id, remainingQty, { changeAmount, notes });
+      }
+
+      // Record transaction in database
+      if (onRegisterSale) {
+        await onRegisterSale({
+          ticketId,
+          clientName: currentClient,
+          paymentMethod,
+          subtotal: cartTotals.subtotal,
+          taxGeneral: cartTotals.taxGeneral,
+          taxLiquor: cartTotals.taxLiquor,
+          taxTobacco: cartTotals.taxTobacco,
+          totalTax: cartTotals.totalTax,
+          total: cartTotals.total,
+          items: cart.map(item => ({
+            productId: item.product.id,
+            productName: item.product.name,
+            quantity: item.quantity,
+            priceUnit: item.product.price,
+            subtotal: item.product.price * item.quantity
+          }))
+        });
       }
 
       // Generate visual receipt invoice modal
