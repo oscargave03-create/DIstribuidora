@@ -91,18 +91,75 @@ CREATE TABLE IF NOT EXISTS sale_items (
 );
 
 -- ====================================================================
--- CONTROL DE ACCESO TOTAL (DESHABILITAR RLS PARA GARANTIZAR ESCRITURA DIRECTA)
--- Al deshabilitar RLS, la clave pública (anon key) tiene permisos completos
--- de lectura y escritura para agilizar la integración en tu demo.
+-- CONTROL DE ACCESO SEGURO (HABILITAR RLS Y DEFINIR POLÍTICAS)
+-- Habilitamos la Seguridad a Nivel de Fila (RLS) en todas las tablas
+-- y creamos las políticas requeridas para permitir accesos de lectura y escritura
+-- seguros tanto para accesos anónimos como autenticados.
 -- ====================================================================
 
-ALTER TABLE app_config DISABLE ROW LEVEL SECURITY;
-ALTER TABLE user_permissions DISABLE ROW LEVEL SECURITY;
-ALTER TABLE products DISABLE ROW LEVEL SECURITY;
-ALTER TABLE stock_history DISABLE ROW LEVEL SECURITY;
-ALTER TABLE product_sections DISABLE ROW LEVEL SECURITY;
-ALTER TABLE sales DISABLE ROW LEVEL SECURITY;
-ALTER TABLE sale_items DISABLE ROW LEVEL SECURITY;
+-- 1. Habilitar RLS en cada tabla
+ALTER TABLE app_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_permissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE stock_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_sections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sales ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sale_items ENABLE ROW LEVEL SECURITY;
+
+-- 2. Eliminar políticas existentes para evitar conflictos
+DROP POLICY IF EXISTS "Permitir todo en app_config" ON app_config;
+DROP POLICY IF EXISTS "Permitir todo en user_permissions" ON user_permissions;
+DROP POLICY IF EXISTS "Permitir todo en products" ON products;
+DROP POLICY IF EXISTS "Permitir todo en stock_history" ON stock_history;
+DROP POLICY IF EXISTS "Permitir todo en product_sections" ON product_sections;
+DROP POLICY IF EXISTS "Permitir todo en sales" ON sales;
+DROP POLICY IF EXISTS "Permitir todo en sale_items" ON sale_items;
+
+-- 3. Crear Políticas de Seguridad Flexibles y Seguras (Permitir lectura y escritura)
+-- Estas políticas garantizan el acceso de la aplicación web a través de la clave anon_key o usuarios autenticados.
+
+-- Políticas para app_config
+CREATE POLICY "Permitir todo en app_config" ON app_config 
+    FOR ALL TO anon, authenticated 
+    USING (true) 
+    WITH CHECK (true);
+
+-- Políticas para user_permissions
+CREATE POLICY "Permitir todo en user_permissions" ON user_permissions 
+    FOR ALL TO anon, authenticated 
+    USING (true) 
+    WITH CHECK (true);
+
+-- Políticas para products
+CREATE POLICY "Permitir todo en products" ON products 
+    FOR ALL TO anon, authenticated 
+    USING (true) 
+    WITH CHECK (true);
+
+-- Políticas para stock_history
+CREATE POLICY "Permitir todo en stock_history" ON stock_history 
+    FOR ALL TO anon, authenticated 
+    USING (true) 
+    WITH CHECK (true);
+
+-- Políticas para product_sections
+CREATE POLICY "Permitir todo en product_sections" ON product_sections 
+    FOR ALL TO anon, authenticated 
+    USING (true) 
+    WITH CHECK (true);
+
+-- Políticas para sales
+CREATE POLICY "Permitir todo en sales" ON sales 
+    FOR ALL TO anon, authenticated 
+    USING (true) 
+    WITH CHECK (true);
+
+-- Políticas para sale_items
+CREATE POLICY "Permitir todo en sale_items" ON sale_items 
+    FOR ALL TO anon, authenticated 
+    USING (true) 
+    WITH CHECK (true);
+
 
 -- ====================================================================
 -- INSERCIÓN DE DATOS POR DEFECTO PARA EL INICIO DE SESIÓN
