@@ -595,6 +595,13 @@ export const storeUpdateProduct = async (
 ): Promise<void> => {
   const now = new Date().toISOString();
 
+  // Find current product state locally to get actual name and previous quantity
+  const localProducts = getLocalProducts(userId);
+  const localIndex = localProducts.findIndex(p => p.id === productId);
+  const localProduct = localIndex !== -1 ? localProducts[localIndex] : null;
+  const prevQty = localProduct ? localProduct.quantity : 0;
+  const prodName = localProduct ? localProduct.name : (updates.name || 'Producto');
+
   try {
     const sUpdates: any = { updated_at: now };
     if (updates.name !== undefined) sUpdates.name = updates.name;
@@ -619,13 +626,13 @@ export const storeUpdateProduct = async (
         .insert({
           id: logId,
           product_id: productId,
-          product_name: updates.name || 'Producto',
+          product_name: prodName,
           user_id: userId,
           user_name: userName,
           type: isAdjust ? (adjustReason.changeAmount > 0 ? "add" : "subtract") : "update",
           change_amount: isAdjust ? adjustReason.changeAmount : 0,
-          previous_quantity: 0, 
-          new_quantity: updates.quantity || 0,
+          previous_quantity: prevQty, 
+          new_quantity: updates.quantity !== undefined ? updates.quantity : prevQty,
           notes: isAdjust ? adjustReason.notes : "Actualización de datos generales del catálogo.",
           timestamp: now
         });

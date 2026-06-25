@@ -86,6 +86,7 @@ export default function PointOfSaleView({
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [clientName, setClientName] = useState('Consumidor Final');
+  const [paymentMethod, setPaymentMethod] = useState<'Efectivo' | 'Tarjeta Clave' | 'Visa' | 'Mastercard' | 'Otros'>('Efectivo');
   const [salesTicket, setSalesTicket] = useState<{ 
     id: string; 
     items: CartItem[]; 
@@ -95,7 +96,8 @@ export default function PointOfSaleView({
     taxTobacco: number;
     totalTax: number;
     total: number; 
-    client: string 
+    client: string;
+    paymentMethod: string;
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -228,7 +230,7 @@ export default function PointOfSaleView({
       for (const item of cart) {
         const remainingQty = item.product.quantity - item.quantity;
         const changeAmount = -item.quantity;
-        const notes = `Venta en Caja POS ${ticketId} - Entregado a: ${currentClient}`;
+        const notes = `Venta en Caja POS ${ticketId} [${paymentMethod}] - Entregado a: ${currentClient}`;
 
         await onSellProduct(item.product.id, remainingQty, { changeAmount, notes });
       }
@@ -243,12 +245,14 @@ export default function PointOfSaleView({
         taxTobacco: cartTotals.taxTobacco,
         totalTax: cartTotals.totalTax,
         total: cartTotals.total,
-        client: currentClient
+        client: currentClient,
+        paymentMethod: paymentMethod
       });
 
       // Reset application POS cart state
       setCart([]);
       setClientName('Consumidor Final');
+      setPaymentMethod('Efectivo');
 
     } catch (err: any) {
       console.error(err);
@@ -464,6 +468,7 @@ export default function PointOfSaleView({
               <div class="meta-row"><span>FACTURA:</span> <strong>${salesTicket.id}</strong></div>
               <div class="meta-row"><span>FECHA:</span> <strong>${new Date().toLocaleDateString('es-ES')} ${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</strong></div>
               <div class="meta-row"><span>CLIENTE:</span> <strong style="text-transform: uppercase;">${salesTicket.client}</strong></div>
+              <div class="meta-row"><span>M&Eacute;TODO DE PAGO:</span> <strong style="text-transform: uppercase;">${salesTicket.paymentMethod || 'EFECTIVO'}</strong></div>
               <div class="meta-row"><span>VENDEDOR:</span> <strong>DISTRIBUIDORA OFICIAL</strong></div>
             </div>
 
@@ -756,6 +761,39 @@ export default function PointOfSaleView({
               />
             </div>
 
+            {/* Método de Pago */}
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1.5 flex items-center gap-1">
+                <Receipt className="w-3.5 h-3.5 text-slate-500" />
+                Método de Pago
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: 'Efectivo', label: '💵 Efectivo' },
+                  { id: 'Tarjeta Clave', label: '💳 Tarjeta Clave' },
+                  { id: 'Visa', label: '💳 Visa' },
+                  { id: 'Mastercard', label: '💳 Mastercard' },
+                  { id: 'Otros', label: '✨ Otros' }
+                ].map((method) => (
+                  <button
+                    key={method.id}
+                    type="button"
+                    onClick={() => setPaymentMethod(method.id as any)}
+                    className={`px-3 py-2.5 text-[11px] rounded-xl border font-sans transition text-left cursor-pointer flex items-center justify-between ${
+                      paymentMethod === method.id
+                        ? 'bg-brand/20 border-brand text-brand font-bold'
+                        : 'bg-slate-950 border-slate-850/80 text-slate-400 hover:border-slate-700 hover:text-slate-355'
+                    }`}
+                  >
+                    <span>{method.label}</span>
+                    {paymentMethod === method.id && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-brand" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Subtotal metrics list */}
             <div className="space-y-1.5 text-xs font-mono pt-2 border-t border-dashed border-slate-850">
               <div className="flex justify-between text-slate-450">
@@ -866,6 +904,10 @@ export default function PointOfSaleView({
                 <div className="flex justify-between">
                   <span>CLIENTE:</span>
                   <span className="font-bold text-slate-900 truncate max-w-36">{salesTicket.client}</span>
+                </div>
+                <div className="flex justify-between text-brand-dark">
+                  <span>MÉTODO DE PAGO:</span>
+                  <span className="font-bold text-emerald-600 uppercase">{salesTicket.paymentMethod || 'Efectivo'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>VENDEDOR:</span>
