@@ -187,3 +187,17 @@ VALUES
   '{"create_product": true, "edit_product": true, "delete_product": true, "adjust_stock": true, "process_sale": true}'::jsonb
 )
 ON CONFLICT (id) DO NOTHING;
+
+-- 8. TABLA DE CHAT PRIVADO SUPER ADMIN <-> ADMINS
+CREATE TABLE IF NOT EXISTS public.admin_chat (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sender_id TEXT NOT NULL,
+  sender_name TEXT NOT NULL,
+  sender_email TEXT NOT NULL,
+  message TEXT NOT NULL,
+  timestamp TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Habilitar réplica en tiempo real para chat
+ALTER TABLE public.admin_chat REPLICA IDENTITY FULL;
+

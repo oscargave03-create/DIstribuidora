@@ -1,4 +1,4 @@
-import { Product, StockHistory, UserSession, AppConfig, UserPermission, ProductSectionObj, Sale, SaleItem } from '../types';
+import { Product, StockHistory, UserSession, AppConfig, UserPermission, ProductSectionObj, Sale, SaleItem, ChatMessage } from '../types';
 import { supabase } from '../supabaseClient';
 
 export enum OperationType {
@@ -1506,5 +1506,105 @@ export const storeLoadSales = async (userId: string): Promise<Sale[]> => {
   }
 
   return getLocalSales(userId);
+};
+
+export const subscribeAdminChat = (
+  onData: (messages: ChatMessage[]) => void
+) => {
+  let active = true;
+
+  const getLocalMessages = (): ChatMessage[] => {
+    const data = localStorage.getItem('app_admin_chat_messages');
+    try {
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const fetchAndEmit = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_chat')
+        .select('*')
+        .order('timestamp', { ascending: true });
+      
+      if (error) throw error;
+
+      if (data) {
+        const mapped: ChatMessage[] = data.map(row => ({
+          id: row.id,
+          senderId: row.sender_id,
+          senderName: row.sender_name,
+          senderEmail: row.sender_email,
+          message: row.message,
+          timestamp: row.timestamp
+        }));
+        if (active) {
+          onData(mapped);
+          localStorage.setItem('app_admin_chat_messages', JSON.stringify(mapped));
+        }
+      }
+    } catch (err) {
+      console.warn("Using offline chat local storage fallback.", err);
+      if (active) {
+        onData(getLocalMessages());
+      }
+    }
+  };
+
+  fetchAndEmit();
+
+  const channel = supabase
+    .channel('realtime-admin-chat')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_chat' }, () => {
+      fetchAndEmit();
+    })
+    .subscribe();
+
+  const handleStorageChange = () => {
+    if (active) {
+      onData(getLocalMessages());
+    }
+  };
+  window.addEventListener("local_chat_update", handleStorageChange);
+
+  return () => {
+    active = false;
+    channel.unsubscribe();
+    window.removeEventListener("local_chat_update", handleStorageChange);
+  };
+};
+
+export const storeAddChatMessage = async (
+  msg: Omit<ChatMessage, 'id'>
+): Promise<void> => {
+  const newMsg: ChatMessage = {
+    ...msg,
+    id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15)
+  };
+
+  try {
+    const { error } = await supabase
+      .from('admin_chat')
+      .insert({
+        id: newMsg.id,
+        sender_id: newMsg.senderId,
+        sender_name: newMsg.senderName,
+        sender_email: newMsg.senderEmail,
+        message: newMsg.message,
+        timestamp: newMsg.timestamp
+      });
+    if (error) throw error;
+  } catch (err) {
+    console.warn("Failed to save chat message to Supabase. Saving locally.", err);
+  }
+
+  const localData = localStorage.getItem('app_admin_chat_messages');
+  const messages: ChatMessage[] = localData ? JSON.parse(localData) : [];
+  messages.push(newMsg);
+  localStorage.setItem('app_admin_chat_messages', JSON.stringify(messages));
+  window.dispatchEvent(new Event("local_chat_update"));
+  return Promise.resolve();
 };
 

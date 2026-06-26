@@ -132,5 +132,14 @@ export interface SaleItem {
   createdAt: string; // ISO string
 }
 
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderEmail: string;
+  message: string;
+  timestamp: string; // ISO string
+}
+
 
 

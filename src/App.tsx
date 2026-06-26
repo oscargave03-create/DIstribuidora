@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Package, 
@@ -28,7 +28,11 @@ import {
   Coffee,
   ShoppingBag,
   TrendingUp,
-  Wrench
+  Wrench,
+  MessageSquare,
+  Send,
+  MessageCircle,
+  Crown
 } from 'lucide-react';
 
 export const appBrandingIcons: Record<string, any> = {
@@ -64,11 +68,13 @@ import {
   storeUpdateSection,
   storeDeleteSection,
   storeAddSale,
-  storeLoadSales
+  storeLoadSales,
+  subscribeAdminChat,
+  storeAddChatMessage
 } from './db/store';
 import { isConfigured } from './firebase';
 import { isSupabaseConfigured } from './supabaseClient';
-import { Product, StockHistory, UserSession, AppConfig, UserPermission, ProductSectionObj, Sale } from './types';
+import { Product, StockHistory, UserSession, AppConfig, UserPermission, ProductSectionObj, Sale, ChatMessage } from './types';
 
 // Page views
 import LoginView from './components/LoginView';
@@ -95,6 +101,13 @@ export default function App() {
   // Config and permissions lists
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const [allPermissionsList, setAllPermissionsList] = useState<UserPermission[]>([]);
+
+  // Chat state
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [newChatMessage, setNewChatMessage] = useState('');
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Navigation tab selection
   const [activeTab, setActiveTab ] = useState<'dashboard' | 'pos' | 'alerts' | 'reports' | 'admin'>('dashboard');
@@ -302,6 +315,49 @@ export default function App() {
     };
   }, [user]);
 
+  // Real-time chat messages synchronization hook
+  useEffect(() => {
+    if (!user) {
+      setChatMessages([]);
+      return;
+    }
+
+    const unsubChat = subscribeAdminChat((messages) => {
+      setChatMessages(messages);
+    });
+
+    return () => {
+      unsubChat();
+    };
+  }, [user]);
+
+  // Track unread messages when chat is closed
+  useEffect(() => {
+    if (isChatOpen) {
+      localStorage.setItem('app_admin_chat_last_viewed_count', String(chatMessages.length));
+      setUnreadChatCount(0);
+    } else {
+      const lastViewed = localStorage.getItem('app_admin_chat_last_viewed_count');
+      const count = lastViewed ? parseInt(lastViewed, 10) : 0;
+      if (chatMessages.length > count) {
+        setUnreadChatCount(chatMessages.length - count);
+      } else {
+        setUnreadChatCount(0);
+      }
+    }
+  }, [chatMessages, isChatOpen]);
+
+  // Auto scroll chat to bottom
+  useEffect(() => {
+    if (isChatOpen) {
+      // Small timeout to let elements render completely before scrolling
+      const t = setTimeout(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 80);
+      return () => clearTimeout(t);
+    }
+  }, [chatMessages, isChatOpen]);
+
   // Aggregate low-stock alerts
   const activeAlertsCount = useMemo(() => {
     return products.filter(p => p.quantity <= p.minQuantity).length;
@@ -323,6 +379,10 @@ export default function App() {
            allPermissionsList.find(p => p.email.toLowerCase() === user.email.toLowerCase()) || 
            null;
   }, [user, allPermissionsList]);
+
+  const canChat = useMemo(() => {
+    return isSuperAdmin || userPermissions?.role === 'admin';
+  }, [isSuperAdmin, userPermissions]);
 
   const activeAllowedTabs = useMemo(() => {
     if (isSuperAdmin) {
@@ -376,6 +436,28 @@ export default function App() {
       setActiveTab(permitted[0]);
     }
   }, [activeAllowedTabs, activeTab, user]);
+
+  const handleSendChatMessage = async (e?: FormEvent) => {
+    if (e) e.preventDefault();
+    if (!newChatMessage.trim() || !user) return;
+
+    try {
+      const senderName = isSuperAdmin 
+        ? "Oscar Guevara" 
+        : (userPermissions?.displayName || user.displayName || user.email || "Usuario Admin");
+
+      await storeAddChatMessage({
+        senderId: user.uid,
+        senderName,
+        senderEmail: user.email || '',
+        message: newChatMessage.trim(),
+        timestamp: new Date().toISOString()
+      });
+      setNewChatMessage('');
+    } catch (err) {
+      console.error("Error sending message:", err);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -456,20 +538,24 @@ export default function App() {
 
           <div className="bg-slate-950 border border-slate-850 rounded-2xl p-4 text-left space-y-3 mb-6">
             <h3 className="text-[10px] font-bold text-slate-450 tracking-wider uppercase border-b border-slate-900 pb-2 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
               Contacto de Soporte y Licencias
             </h3>
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-550">Soporte Técnico:</span>
-                <span className="font-semibold text-slate-205">Oscar Guevara</span>
+                <span className="text-slate-400">Super Admin:</span>
+                <span className="font-semibold text-slate-200">Oscar Guevara</span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-550">Correo de Contacto:</span>
+                <span className="text-slate-400">Contactos / Correo:</span>
                 <span className="font-mono font-semibold text-brand select-all">oscargave03@gmail.com</span>
               </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-400">Celular / WhatsApp:</span>
+                <span className="font-mono font-semibold text-emerald-400 select-all">(+507)67140596</span>
+              </div>
               <div className="flex items-center justify-between text-xs border-t border-slate-900 pt-2 mt-2">
-                <span className="text-slate-550">Empresa / Entidad:</span>
+                <span className="text-slate-400">Empresa / Entidad:</span>
                 <span className="font-semibold text-slate-300 truncate max-w-[170px]">{appConfig?.companyName || "Distribuidora"}</span>
               </div>
             </div>
@@ -1103,6 +1189,137 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* 5. Floating Admin/Super Admin Chat */}
+      {canChat && (
+        <div className="no-print">
+          {/* Floating trigger button */}
+          <button
+            onClick={() => setIsChatOpen(!isChatOpen)}
+            className="fixed bottom-6 right-6 z-40 bg-brand text-slate-950 px-5 py-3.5 rounded-full shadow-2xl flex items-center gap-2.5 hover:scale-[1.05] active:scale-[0.95] transition-all cursor-pointer font-black border border-brand-500/20 group select-none"
+            title="Chat privado de Soporte y Administradores"
+          >
+            <div className="relative">
+              <MessageSquare className="w-5 h-5 group-hover:rotate-6 transition-transform text-slate-950" />
+              {unreadChatCount > 0 && (
+                <span className="absolute -top-2.5 -right-2.5 bg-rose-500 text-white font-black text-[9px] px-1.5 py-0.5 rounded-full shadow-sm animate-bounce">
+                  {unreadChatCount}
+                </span>
+              )}
+            </div>
+            <span className="text-xs tracking-wide text-slate-950">Soporte & Admin</span>
+          </button>
+
+          {/* Chat Window Panel */}
+          <AnimatePresence>
+            {isChatOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 30, scale: 0.95 }}
+                className="fixed bottom-24 right-6 z-50 w-96 max-w-[calc(100vw-32px)] h-[500px] bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-fade-in"
+              >
+                {/* Header */}
+                <div className="p-4 bg-slate-850 border-b border-slate-800 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-2xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand text-sm font-bold">
+                      <MessageCircle className="w-5 h-5 text-brand" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white tracking-wide">Chat de Soporte</h4>
+                      <p className="text-[10px] text-slate-450">Canal exclusivo Super Admin y Admins</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setIsChatOpen(false)}
+                    className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Messages List Area */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-950/30 scrollbar-thin scrollbar-thumb-slate-850">
+                  {chatMessages.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3 select-none">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-850 border border-slate-800 flex items-center justify-center text-slate-500">
+                        <MessageSquare className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-slate-400">Sin mensajes aún</p>
+                        <p className="text-[10px] text-slate-500 mt-1 max-w-[200px]">
+                          Escribe un mensaje para iniciar la conversación privada con el Super Admin Oscar Guevara.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    chatMessages.map((msg) => {
+                      const isMe = msg.senderId === user.uid;
+                      const msgSenderIsSuperAdmin = msg.senderEmail.toLowerCase() === 'oscargave03@gmail.com';
+                      
+                      return (
+                        <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                          {/* Sender Info Line */}
+                          <div className="flex items-center gap-1.5 mb-1 px-1">
+                            <span className="text-[10px] font-bold text-slate-400">{msg.senderName}</span>
+                            {msgSenderIsSuperAdmin ? (
+                              <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[8px] font-black px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                                <Crown className="w-2.5 h-2.5 text-amber-500" />
+                                Super Admin
+                              </span>
+                            ) : (
+                              <span className="bg-sky-500/10 text-sky-400 border border-sky-500/20 text-[8px] font-bold px-1.5 py-0.5 rounded-md">
+                                Admin
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Message bubble card */}
+                          <div
+                            className={`p-3 rounded-2xl text-xs break-words leading-relaxed max-w-[85%] border shadow-sm ${
+                              isMe
+                                ? 'bg-brand/10 border-brand-500/20 text-slate-100 rounded-tr-none'
+                                : msgSenderIsSuperAdmin
+                                  ? 'bg-amber-500/5 border-amber-500/15 text-slate-100 rounded-tl-none'
+                                  : 'bg-slate-800 border-slate-750 text-slate-200 rounded-tl-none'
+                            }`}
+                          >
+                            <p className="whitespace-pre-wrap text-left">{msg.message}</p>
+                          </div>
+
+                          {/* Message Time Indicator */}
+                          <span className="text-[8px] text-slate-500 font-mono mt-1 px-1">
+                            {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+
+                {/* Input Draft Panel */}
+                <form onSubmit={handleSendChatMessage} className="p-3 bg-slate-900 border-t border-slate-800 flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={newChatMessage}
+                    onChange={(e) => setNewChatMessage(e.target.value)}
+                    placeholder="Escribe un mensaje de soporte..."
+                    className="flex-1 h-10 px-3 bg-slate-950 border border-slate-850 focus:border-brand/50 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none transition"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!newChatMessage.trim()}
+                    className="h-10 w-10 flex items-center justify-center bg-brand hover:bg-brand-500 text-slate-950 rounded-xl transition cursor-pointer hover:scale-105 active:scale-95 disabled:opacity-40 disabled:scale-100 disabled:cursor-not-allowed"
+                  >
+                    <Send className="w-4 h-4 text-slate-950" />
+                  </button>
+                </form>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
 
     </div>
   );
